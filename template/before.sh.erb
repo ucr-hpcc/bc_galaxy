@@ -4,9 +4,11 @@
 # Find available port to run server on
 port=$(find_port)
 
+module load galaxy
 
 # Define Galaxy Variables
-export GALAXY_PATH="<%= BatchConnect::App.from_token(session.token).root.realpath.join("galaxy").to_s %>"
+#export GALAXY_PATH="<%= BatchConnect::App.from_token(session.token).root.realpath.join("galaxy").to_s %>"
+export GALAXY_PATH="$(dirname $(which run.sh))"
 export GALAXY_CONFIG_FILE="${PWD}/galaxy.yml"
 MOUNT="/node/${HOSTNAME}/${port}=galaxy.webapps.galaxy.buildapp:uwsgi_app()"
 DATAROOT=${HOME}/.galaxy
@@ -72,27 +74,11 @@ EOL
 (
 umask 077
 cat > "${GALAXY_CONFIG_FILE}" << EOL
-uwsgi:
-  http: 0.0.0.0:${port}
-  buffer-size: 16384
-  processes: 1
-  threads: 4
-  offload-threads: 2
-  static-map: /static/style=static/style/blue
-  static-map: /static=static
-  static-map: /favicon.ico=static/favicon.ico
-  master: false
-  virtualenv: .venv
-  pythonpath: lib
-  mount: ${MOUNT}
-  manage-script-name: true
-  thunder-lock: false
-  die-on-term: true
-  hook-master-start: unix_signal:2 gracefully_kill_them_all
-  hook-master-start: unix_signal:15 gracefully_kill_them_all
-  py-call-osafterfork: true
-  enable-threads: true
+  gunicorn:
+    enable: true
+    bind: 0.0.0.0:${port}
 galaxy:
+  #galaxy_infrastructure_web_port: 8080
   data_dir: ${DATAROOT}
   single_user: ${EMAIL}
   tool_dependency_dir: ${GALAXY_PATH}/database/dependencies
@@ -100,5 +86,6 @@ galaxy:
   workflow_resource_params_file: ${WORKFLOW_RESOURCE_PARAMS_CONF_FILE_PATH}
   admin_users: ${EMAIL}
   job_config_file: ${JOB_CONFIG_FILE_PATH}
+  galaxy_url_prefix: /node/${HOSTNAME}/${port}
 EOL
 )
