@@ -6,6 +6,7 @@ if wait_until_port_used "${host}:${port}" 300; then
   echo "Discovered Galaxy Server listening on port ${port}!"
 else
   echo "Timed out waiting for Galaxy Server to open port ${port}!"
+  pkill -P ${SCRIPT_PID}
   clean_up 1
 fi
 sleep 2

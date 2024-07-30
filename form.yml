@@ -1,43 +1,42 @@
 ---
-cluster: "owens"
-form:
-  - bc_account
-  - bc_num_hours
-  - node_type
-  - num_cores
-  - job_runner
-  - bc_email_on_started
+cluster: "hpcc"
 attributes:
+  bc_account: null
+  bc_num_slots: 1
   num_cores:
     widget: "number_field"
     label: "Number of cores"
-    value: 1
-    help: |
-      Number of cores on node type (4 GB per core unless requesting whole
-      node). Leave blank if requesting full node.
+    value: 4
     min: 1
-    max: 28
-    step: 1
     id: 'num_cores'
-  bc_account:
-    label: "Project"
-    help: "You can leave this blank if **not** in multiple projects."
-  node_type:
-    widget: select
-    label: "Node type"
+  num_mem:
+    widget: "number_field"
+    label: "Memory in GB"
+    value: "8"
+    min: 1
+    id: 'num_mem'
+  auto_queues:
     help: |
-      - **any** - (*1-28 cores*) Use any available Owens node. This reduces the
-        wait time as there are no node requirements.
-      - **hugemem** - (*4-48 cores*) Use an Owens node that has 1.5TB of
-        available RAM as well as 48 cores. There are 16 of these nodes on
-        Owens.
-      - **debug** - (*1-28 cores*) For short sessions (= 1 hour) the debug
-        queue will have the shortest wait time. This is only accessible during
-        8AM - 6PM, Monday - Friday. There are 6 of these nodes on Owens.
-    options:
-      - [ "any",     "any"     ]
-      - [ "hugemem", "hugemem" ]
-      - [ "debug",   "debug"   ]
+      For more details on our Queue Policies, see our <a href="https://hpcc.ucr.edu/manuals/hpc_cluster/queue/" target="_blank">Queue Policies</a> page.
+  working_dir:
+    label: "Working Directory"
+    data-filepicker: true
+    data-target-file-type: dirs
+    readonly: false
+    help: "Select your project directory; defaults to your home directory"
+  runtime:
+    widget: "text_field"
+    label: "Job runtime"
+    pattern: "[0-9:-]*"
+    value: "2-00:00:00"
+    help: |
+      In the format of DD-HH:MM:SS. Eg. 2 days, 13 hours, 37 minutes, 42 seconds would be "2-13:37:42".<br/>
+      Max runtime is determined by the queue, see <a href="https://hpcc.ucr.edu/manuals/hpc_cluster/queue/" target="_blank">Queue Policies</a> for more details.
+  extra_slurm:
+    widget: "text_field"
+    label: "Additional Slurm Arguments"
+    value: ""
+    help: "Additional arguments to pass to slurm. eg '--gres=gpu:1' will be needed if running on the GPU partition."
   job_runner:
     widget: select
     label: "Galaxy tool runner"
@@ -51,4 +50,12 @@ attributes:
         When session ends, the jobs will continue to run and finish.
     options:
       - [ "local",     "local"]
-      - [ "cluster", "pbs" ]
+      - [ "cluster", "slurm" ]
+form:
+  - working_dir
+  - num_cores
+  - num_mem
+  - runtime
+  - auto_queues
+  - extra_slurm
+  - job_runner

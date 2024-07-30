@@ -2,14 +2,15 @@
 [[ $(type -t module) == "function" ]] && export -f module
 
 # Find available port to run server on
-port=8080
+port=$(find_port)
+
 
 # Define Galaxy Variables
 export GALAXY_PATH="<%= BatchConnect::App.from_token(session.token).root.realpath.join("galaxy").to_s %>"
 export GALAXY_CONFIG_FILE="${PWD}/galaxy.yml"
-MOUNT="/node/${HOSTNAME}/8080=galaxy.webapps.galaxy.buildapp:uwsgi_app()"
+MOUNT="/node/${HOSTNAME}/${port}=galaxy.webapps.galaxy.buildapp:uwsgi_app()"
 DATAROOT=${HOME}/.galaxy
-EMAIL="${USER}@osc.edu"
+EMAIL="${USER}@test.edu"
 export JOB_CONFIG_FILE_PATH="${PWD}/job_conf.xml"
 export JOB_RESOURCE_PARAMS_CONF_FILE_PATH="${PWD}/job_resource_params_conf.xml"
 export WORKFLOW_RESOURCE_PARAMS_CONF_FILE_PATH="${PWD}/workflow_resource_params_conf.xml"
@@ -17,16 +18,6 @@ export WORKFLOW_RESOURCE_PARAMS_CONF_FILE_PATH="${PWD}/workflow_resource_params_
 echo "GALAXY location: '${GALAXY_PATH}'"
 echo "Data location: '${DATAROOT}'"
 
-# Load the required environment
-<%-
-  if context.node_type=="hugemem"
-      ppn = 48
-  elsif context.num_cores.blank?
-      ppn = 28
-  else
-      ppn = context.num_cores.to_i
-  end
--%>
 
 # Generate Galaxy job configuration file
 (
@@ -35,30 +26,11 @@ cat > "${JOB_CONFIG_FILE_PATH}" << EOL
 <?xml version="1.0"?>
 <!-- A sample job config that explicitly configures job running the way it is configured by default (if there is no explicit config). -->
 <job_conf>
-    <resources>
-        <group id="basic">cores,time</group>
-    </resources>
-    <tools>
-        <tool id="bed2gff1" destination="dynamic_cores_time" resources="basic"/>
-    </tools>
     <plugins>
-        <plugin id="local" type="runner" load="galaxy.jobs.runners.local:LocalJobRunner"/>
-        <plugin id="pbs" type="runner" load="galaxy.jobs.runners.pbs:PBSJobRunner"/>
-        <plugin id="dynamic" type="runner">
-            <param id="rules_module">galaxy.jobs.rules</param>
-        </plugin>
+        <plugin id="local" type="runner" load="galaxy.jobs.runners.local:LocalJobRunner" workers="4"/>
     </plugins>
-    <destinations default="<%= context.job_runner %>">
-        <destination id="dynamic_cores_time" runner="dynamic">
-            <param id="type">python</param>
-            <param id="function">dynamic_cores_time</param>
-        </destination>
-        <destination id="pbs" runner="pbs">
-            <param id="Resource_List">walltime=5:00:00,nodes=1:ppn=<%= ppn %></param>
-        </destination>
-        <destination id="local" runner="local">
-            <param id="local_slots"><%= ppn %></param>
-        </destination>
+    <destinations>
+        <destination id="local" runner="local"/>
     </destinations>
 </job_conf>
 EOL
@@ -101,7 +73,7 @@ EOL
 umask 077
 cat > "${GALAXY_CONFIG_FILE}" << EOL
 uwsgi:
-  http: 0.0.0.0:8080
+  http: 0.0.0.0:${port}
   buffer-size: 16384
   processes: 1
   threads: 4
