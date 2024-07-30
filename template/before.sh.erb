@@ -10,7 +10,6 @@ module load galaxy
 #export GALAXY_PATH="<%= BatchConnect::App.from_token(session.token).root.realpath.join("galaxy").to_s %>"
 export GALAXY_PATH="$(dirname $(which run.sh))"
 export GALAXY_CONFIG_FILE="${PWD}/galaxy.yml"
-MOUNT="/node/${HOSTNAME}/${port}=galaxy.webapps.galaxy.buildapp:uwsgi_app()"
 DATAROOT=${HOME}/.galaxy
 EMAIL="${USER}@test.edu"
 export JOB_CONFIG_FILE_PATH="${PWD}/job_conf.xml"
@@ -74,6 +73,7 @@ EOL
 (
 umask 077
 cat > "${GALAXY_CONFIG_FILE}" << EOL
+gravity:
   gunicorn:
     enable: true
     bind: 0.0.0.0:${port}
