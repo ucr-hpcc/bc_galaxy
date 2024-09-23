@@ -23,7 +23,7 @@ attributes:
     data-filepicker: true
     data-target-file-type: dirs
     readonly: false
-    help: "Select your project directory; defaults to your home directory"
+    help: "Select where your galaxy directory will be located."
   runtime:
     widget: "text_field"
     label: "Job runtime"
@@ -45,8 +45,8 @@ attributes:
         The maximum number of concurrent jobs is the number of cores.
         When session ends, you lose contact with those jobs still running, 
         and they must be restarted.
-      - **cluster** - When running tools in a cluster, they are separate processes from the Galaxy server.
-        They are jobs submitted to Owens Cluster as configured above and there is no maximum number of concurrent jobs. 
+      - **cluster** - (STILL IN DEVELOPMENT!)When running tools in a cluster, they are separate processes from the Galaxy server.
+        They are jobs submitted to Slurm as configured above and there is no maximum number of concurrent jobs. 
         When session ends, the jobs will continue to run and finish.
     options:
       - [ "local",     "local"]

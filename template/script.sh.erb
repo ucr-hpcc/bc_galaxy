@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
 
+#Creates galaxy directory and sets directory permissions
+if [ ! -d "${DATAROOT}" ]; then
+  echo "Creating galaxy directory..."
+  mkdir -p ${DATAROOT}/database/dependencies ${DATAROOT}/tool-data ${DATAROOT}/config ${DATAROOT}/import-dir
+  cp -r ${GALAXY_PATH}/tool-data/* ${DATAROOT}/tool-data/
+  chmod 770 ${DATAROOT}
+fi
+
 # Start Galaxy
 echo "Starting up Galaxy..."
-sh ${GALAXY_PATH}/run.sh
+sh ${GALAXY_PATH}/run.sh --no-create-venv --skip-client-build --skip-wheels
+

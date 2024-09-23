@@ -1,46 +1,25 @@
 cd "$(dirname "$0")"
+
+VERSION="release_24.1"
+
 # Install Galaxy
 if [[ ! -e galaxy ]]; then
     git clone git@github.com:galaxyproject/galaxy.git
 fi
 
+ln -s custom-scripts galaxy/custom-scripts
+
 cd galaxy
-git checkout release_24.1
+git checkout ${VERSION}
 
 
-# Add job rules
-(
-umask 077
-cat > "./lib/galaxy/jobs/rules/destinations.py" << EOL
-import logging
-from galaxy.jobs.mapper import JobMappingException
-from galaxy.jobs import JobDestination
+# Add custom scripts to configure Galaxy for ondemand use
+ln -s $PWD/custom-scripts/custom_destinations.py $PWD/lib/galaxy/jobs/rules/destinations.py
 
-log = logging.getLogger(__name__)
+#Remove galaxy remote user and replace with custom remote user
+rm -r $PWD/lib/galaxy/web/framework/middleware/remoteuser.py
+ln -s $PWD/custom-scripts/custom_remote_user.py $PWD/lib/galaxy/web/framework/middlewware/remoteuser.py
 
-FAILURE_MESSAGE = 'This tool could not be run because of a misconfiguration in the Galaxy job running system, please report this error'
-
-
-def dynamic_cores_time(app, tool, job, user_email, resource_params):
-    # handle job resource parameters
-    if not resource_params.get("cores") and not resource_params.get("time"):
-        default_destination_id = app.job_config.get_destination(None)
-        log.warning('(%s) has no input parameter cores or time. Run with default runner: %s' % (job.id, default_destination_id.runner))
-        return default_destination_id
-    
-    try:
-        cores = resource_params.get("cores")
-        time = resource_params.get("time")
-        resource_list = 'walltime=%s:00:00,nodes=1:ppn=%s' % (time, cores)
-    except:
-        default_destination_id = app.job_config.get_destination(None)
-        log.warning('(%s) failed to run with customized configuration. Run with default runner: %s' % (job.id, default_destination_id.runner))
-        return default_destination_id
-
-    log.info('returning pbs runner with configuration %s', resource_list)
-    return JobDestination(runner="pbs", params={"Resource_List": resource_list})
-EOL
-)
 
 # Install dependencies
 # Retrieved from line 1-54 in https://github.com/galaxyproject/galaxy/blob/release_19.09/run.sh
@@ -79,13 +58,6 @@ then
     export GALAXY_CONFIG_OVERRIDE_PANEL_VIEWS_DIR="test/integration/panel_views_1/"
 fi
 
-#if [ ! -z "$GALAXY_RUN_WITH_TEST_TOOLS" ];
-#then
-#    export GALAXY_CONFIG_OVERRIDE_TOOL_CONFIG_FILE="test/functional/tools/samples_tool_conf.xml"
-#    export GALAXY_CONFIG_ENABLE_BETA_WORKFLOW_MODULES="true"
-#    export GALAXY_CONFIG_OVERRIDE_ENABLE_BETA_TOOL_FORMATS="true"
-#    export GALAXY_CONFIG_OVERRIDE_WEBHOOKS_DIR="test/functional/webhooks"
-#fi
 
 if [ -n "$GALAXY_UNIVERSE_CONFIG_DIR" ]; then
     python ./scripts/build_universe_config.py "$GALAXY_UNIVERSE_CONFIG_DIR"

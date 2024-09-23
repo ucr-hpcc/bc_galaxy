@@ -1,22 +1,56 @@
 # Export the module function if it exists
 [[ $(type -t module) == "function" ]] && export -f module
 
+
+#Set working directory
+
+<%
+
+working_dir = Pathname.new(context.working_dir)
+
+# Ensure that code-server always starts up in either a user defined directory or the home directory.
+if ! working_dir.exist?
+    working_dir = Pathname.new(ENV['HOME'])
+elsif working_dir.file?
+    working_dir = working_dir.parent
+end
+
+%>
+
+#Check if working directory is a symlink
+if [ -L <%= working_dir.to_s %> ]; then
+  export DATAROOT="$(readlink <%= working_dir.to_s %>)"
+else
+  export DATAROOT="<%= working_dir.to_s %>"
+fi
+
+#Check if working directory resides in a 'bigdata' directory
+#This is to allow for users to upload data from their bigdata directory to galaxy
+if $(echo ${DATAROOT} | grep -q "bigdata"); then 
+  export IMPORT_DIR="$(dirname ${DATAROOT})"
+else
+  export IMPORT_DIR=${DATAROOT}/import-dir
+fi
+
+export DATAROOT=${DATAROOT}/.galaxy
+
+
 # Find available port to run server on
-port=$(find_port)
+export port=$(find_port)
 
 module load galaxy
 
+
 # Define Galaxy Variables
-#export GALAXY_PATH="<%= BatchConnect::App.from_token(session.token).root.realpath.join("galaxy").to_s %>"
 export GALAXY_PATH="$(dirname $(which run.sh))"
+export GALAXY_ROOT_DIR=${GALAXY_PATH}
 export GALAXY_CONFIG_FILE="${PWD}/galaxy.yml"
-DATAROOT=${HOME}/.galaxy
-EMAIL="${USER}@test.edu"
+export EMAIL="${USER}@ondemand.hpcc.ucr.edu"
 export JOB_CONFIG_FILE_PATH="${PWD}/job_conf.xml"
 export JOB_RESOURCE_PARAMS_CONF_FILE_PATH="${PWD}/job_resource_params_conf.xml"
 export WORKFLOW_RESOURCE_PARAMS_CONF_FILE_PATH="${PWD}/workflow_resource_params_conf.xml"
 
-echo "GALAXY location: '${GALAXY_PATH}'"
+echo "GALAXY config file location: '${GALAXY_CONFIG_FILE}'"
 echo "Data location: '${DATAROOT}'"
 
 
@@ -74,14 +108,36 @@ EOL
 umask 077
 cat > "${GALAXY_CONFIG_FILE}" << EOL
 gravity:
+  galaxy_user : $USER
   gunicorn:
     enable: true
     bind: 0.0.0.0:${port}
+
 galaxy:
-  #galaxy_infrastructure_web_port: 8080
   data_dir: ${DATAROOT}
-  single_user: ${EMAIL}
-  tool_dependency_dir: ${GALAXY_PATH}/database/dependencies
+  registration_warning_message: "The publicname and email MUST correspond to a user's netID and email on the cluster. 
+  Passwords are not used for authentication but still MUST be filled out. It is advised to randomly generate passwords for users." 
+  #Remote user options
+  use_remote_user: true
+  remote_user_header: HTTP_X_FORWARDED_USER
+  allow_user_creation: false
+  allow_user_deletion: true
+  allow_user_impersonation: true
+  #Tool shed and data config options 
+  tool_dependency_dir: ${DATAROOT}/database/dependencies
+  tool_data_path: ${DATAROOT}/tool-data
+  #Import options
+  library_import_dir: ${IMPORT_DIR}
+  user_library_import_dir: ${DATAROOT}/import-dir
+  user_library_import_symlink_allowlist: ${IMPORT_DIR}
+  user_library_import_dir_auto_creation: true
+  allow_path_paste: true
+  #Data manager config options
+  enable_data_manager_user_view: true
+  galaxy_data_manager_data_path: ${DATAROOT}/tool-data
+  #Config directory options
+  config_dir: ${DATAROOT}/config
+  #Job stuff
   job_resource_params_file: ${JOB_RESOURCE_PARAMS_CONF_FILE_PATH}
   workflow_resource_params_file: ${WORKFLOW_RESOURCE_PARAMS_CONF_FILE_PATH}
   admin_users: ${EMAIL}
@@ -89,3 +145,4 @@ galaxy:
   galaxy_url_prefix: /node/${HOSTNAME}/${port}
 EOL
 )
+

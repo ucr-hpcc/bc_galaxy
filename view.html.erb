@@ -1,5 +1,21 @@
-<form action="/node/<%= host %>/<%= port %>/" method="post" target="_blank">
+<script>
+function displayLink() {
+    var linkMessage = document.getElementById("linkMessage")
+    var link = document.getElementById("galaxyLink")
+    linkMessage.style.display = "block";
+    
+    link.select();
+    navigator.clipboard.writeText(link.value);
+  }
+</script>
+
+<input type="text" style="display: none;" value="https://ondemand.hpcc.ucr.edu/node/<%= host %>/<%= port %>/login/start?redirect=None" id="galaxyLink">
+
+<form action="/node/<%= host %>/<%= port %>/login/start?redirect=None" method="post" target="_blank">
   <button class="btn btn-primary" type="submit">
     <i class="fa fa-eye"></i> Connect to Galaxy
   </button>
+  <button class="btn btn-light float-right border border-dark" type="button" onclick="displayLink()">Share Galaxy Session</button>
+  <div id="linkMessage" class="center bottom" style="display: none;">Link copied to clipboard. <br>NOTE: The user must have an account in the current Galaxy Session.</br></div>
 </form>
+
