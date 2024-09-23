@@ -1,6 +1,6 @@
 cd "$(dirname "$0")"
 
-VERSION="release_24.1"
+VERSION="24.1"
 
 # Install Galaxy
 if [[ ! -e galaxy ]]; then
@@ -10,7 +10,7 @@ fi
 ln -s custom-scripts galaxy/custom-scripts
 
 cd galaxy
-git checkout ${VERSION}
+git checkout release_${VERSION}
 
 
 # Add custom scripts to configure Galaxy for ondemand use
@@ -70,4 +70,6 @@ if [ "$INITIALIZE_TOOL_DEPENDENCIES" -eq 1 ]; then
     python ./scripts/manage_tool_dependencies.py init_if_needed
 fi
 
-
+#Rename galaxy directory to specified version
+cd ..
+mv galaxy ${VERSION}
