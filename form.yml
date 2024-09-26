@@ -19,11 +19,18 @@ attributes:
     help: |
       For more details on our Queue Policies, see our <a href="https://hpcc.ucr.edu/manuals/hpc_cluster/queue/" target="_blank">Queue Policies</a> page.
   working_dir:
-    label: "Working Directory"
+    label: "Database Directory"
     data-filepicker: true
     data-target-file-type: dirs
     readonly: false
-    help: "Select where your galaxy directory will be located."
+    help: "Select where your galaxy database will be or is currently located."
+  import_dir:
+    label: "Import directory"
+    data-filepicker: true
+    data-target-file-type: dirs
+    readonly: false
+    help: | 
+      Select where your import directory is located (Defaults to where your 'Database Directory' is located). All files/directories located here will be accessible in Galaxy.</br> NOTE: Symbolic files/directories will have to be import by Galaxy admin users.
   runtime:
     widget: "text_field"
     label: "Job runtime"
@@ -53,6 +60,7 @@ attributes:
       - [ "cluster", "slurm" ]
 form:
   - working_dir
+  - import_dir
   - num_cores
   - num_mem
   - runtime

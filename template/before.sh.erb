@@ -8,7 +8,7 @@
 
 working_dir = Pathname.new(context.working_dir)
 
-# Ensure that code-server always starts up in either a user defined directory or the home directory.
+# Ensure that galaxy-server always starts up in either a user defined directory or the home directory.
 if ! working_dir.exist?
     working_dir = Pathname.new(ENV['HOME'])
 elsif working_dir.file?
@@ -17,24 +17,49 @@ end
 
 %>
 
-#Check if working directory is a symlink
-if [ -L <%= working_dir.to_s %> ]; then
+DATAROOT=$(readlink <%= working_dir.to_s %> | grep "^/bigdata" | grep -E "(${USER}|shared)$")
+#Check if working directory is a symlink to bigdata or shared (Only really checks for bigdata or shared symlinks. Other symlinks might not work correctly)
+if [ ! -z "${DATAROOT}"  ]; then
   export DATAROOT="$(readlink <%= working_dir.to_s %>)"
 else
   export DATAROOT="<%= working_dir.to_s %>"
 fi
 
-#Check if working directory resides in a 'bigdata' directory
-#This is to allow for users to upload data from their bigdata directory to galaxy
-if $(echo ${DATAROOT} | grep -q "bigdata"); then 
-  export IMPORT_DIR="$(dirname ${DATAROOT})"
-else
-  export IMPORT_DIR=${DATAROOT}/import-dir
-fi
-
 export DATAROOT=${DATAROOT}/.galaxy
 
 
+#Check if import directory location given
+<%
+
+import_dir = Pathname.new(context.import_dir)
+
+if ! import_dir.exist?
+  import_dir = Pathname.new(ENV['DATAROOT'])
+elsif import_dir.file?
+  import_dir = import_dir.parent
+end
+
+%>
+
+IMPORT_DIR="<%= import_dir.to_s %>"
+
+#If an import directory was not given set it to the database directory
+if [ ${IMPORT_DIR} == ${DATAROOT} ]; then
+  export IMPORT_DIR=${DATAROOT}/import-dir
+else
+  #Check if the import dir is either bigdata or shared directory
+  IMPORT_DIR=$(readlink <%= import_dir.to_s %> | grep "^/bigdata" | grep -E "(${USER}|shared)$")
+  #If the variable is not empty then check if it is a user directory
+  if [ ! -z "${IMPORT_DIR}" ]; then
+    if [ $(echo ${IMPORT_DIR} | grep -c "${USER}" ) -eq 1 ]; then
+      export IMPORT_DIR=$(dirname ${IMPORT_DIR})
+    fi
+  #If import directory is invalid (Some symlink that couldn't be resolved) then just set it to the default import directory
+  else
+    export IMPORT_DIR=${DATAROOT}/import-dir
+  fi 
+fi
+ 
 # Find available port to run server on
 export port=$(find_port)
 
@@ -50,9 +75,13 @@ export JOB_CONFIG_FILE_PATH="${PWD}/job_conf.xml"
 export JOB_RESOURCE_PARAMS_CONF_FILE_PATH="${PWD}/job_resource_params_conf.xml"
 export WORKFLOW_RESOURCE_PARAMS_CONF_FILE_PATH="${PWD}/workflow_resource_params_conf.xml"
 
+
+#For testing local galaxy instances
+#export GALAXY_PATH="<%= BatchConnect::App.from_token(session.token).root.realpath.join("24.1").to_s %>"
+
 echo "GALAXY config file location: '${GALAXY_CONFIG_FILE}'"
 echo "Data location: '${DATAROOT}'"
-
+echo "Import directory location '${IMPORT_DIR}'"
 
 # Generate Galaxy job configuration file
 (
@@ -128,9 +157,6 @@ galaxy:
   tool_data_path: ${DATAROOT}/tool-data
   #Import options
   library_import_dir: ${IMPORT_DIR}
-  user_library_import_dir: ${DATAROOT}/import-dir
-  user_library_import_symlink_allowlist: ${IMPORT_DIR}
-  user_library_import_dir_auto_creation: true
   allow_path_paste: true
   #Data manager config options
   enable_data_manager_user_view: true
@@ -145,4 +171,3 @@ galaxy:
   galaxy_url_prefix: /node/${HOSTNAME}/${port}
 EOL
 )
-

@@ -5,13 +5,16 @@ VERSION="24.1"
 # Install Galaxy
 if [[ ! -e galaxy ]]; then
     git clone git@github.com:galaxyproject/galaxy.git
+    mv galaxy ${VERSION}
+    cp -r custom-scripts ${VERSION}
 fi
 
-
-cd galaxy
+cd ${VERSION}
 git checkout release_${VERSION}
 
-
+# Create virtualenv
+module load miniconda3
+python -m venv .venv
 
 # Install dependencies
 # Retrieved from line 1-54 in https://github.com/galaxyproject/galaxy/blob/release_19.09/run.sh
@@ -62,15 +65,13 @@ if [ "$INITIALIZE_TOOL_DEPENDENCIES" -eq 1 ]; then
     python ./scripts/manage_tool_dependencies.py init_if_needed
 fi
 
-cd ..
-
-#Rename galaxy directory to specified version
-mv galaxy ${VERSION}
-
+rm -rf .git
 
 # Add custom scripts to configure Galaxy for ondemand use
-ln -s $PWD/custom-scripts/custom_destinations.py $PWD/${VERSION}/lib/galaxy/jobs/rules/destinations.py
+ln -s $PWD/custom-scripts/custom_destinations.py $PWD/lib/galaxy/jobs/rules/destinations.py
 
 #Remove galaxy remote user and replace with custom remote user
-rm $PWD/${VERSION}/lib/galaxy/web/framework/middleware/remoteuser.py
-ln -s $PWD/custom-scripts/custom_remote_user.py $PWD/${VERSION}/lib/galaxy/web/framework/middlewware/remoteuser.py
+rm $PWD/lib/galaxy/web/framework/middleware/remoteuser.py
+ln -s $PWD/custom-scripts/custom_remote_user.py $PWD/lib/galaxy/web/framework/middleware/remoteuser.py
+
+echo "Setup finished..."
