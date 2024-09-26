@@ -26,15 +26,13 @@ else
 fi
 
 export DATAROOT=${DATAROOT}/.galaxy
-
-
 #Check if import directory location given
 <%
 
 import_dir = Pathname.new(context.import_dir)
 
 if ! import_dir.exist?
-  import_dir = Pathname.new(ENV['DATAROOT'])
+  import_dir = Pathname.new(ENV['HOME'])
 elsif import_dir.file?
   import_dir = import_dir.parent
 end
@@ -44,7 +42,7 @@ end
 IMPORT_DIR="<%= import_dir.to_s %>"
 
 #If an import directory was not given set it to the database directory
-if [ ${IMPORT_DIR} == ${DATAROOT} ]; then
+if [ ${IMPORT_DIR} == ${HOME} ]; then
   export IMPORT_DIR=${DATAROOT}/import-dir
 else
   #Check if the import dir is either bigdata or shared directory

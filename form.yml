@@ -23,7 +23,7 @@ attributes:
     data-filepicker: true
     data-target-file-type: dirs
     readonly: false
-    help: "Select where your galaxy database will be or is currently located."
+    help: "Select where your galaxy database will be or is currently located. Defaults to your $HOME directory"
   import_dir:
     label: "Import directory"
     data-filepicker: true
