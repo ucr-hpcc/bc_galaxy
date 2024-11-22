@@ -33,14 +33,6 @@ attributes:
     help: |
       In the format of DD-HH:MM:SS. Eg. 2 days, 13 hours, 37 minutes, 42 seconds would be "2-13:37:42".<br/>
       Max runtime is determined by the queue, see <a href="https://hpcc.ucr.edu/manuals/hpc_cluster/queue/" target="_blank">Queue Policies</a> for more details.
-  extra_modules:
-    widget: "text_field"
-    label: "Additional modules"
-    pattern: "[a-zA-Z0-9/.\\-+_ ]*"
-    value: ""
-    help: |
-      Additional modules to load when loading the Galaxy Session, separated by a space.<br/>
-      eg. 'boost/1.80.1 cuda/11.8 vmd/1.9.3'
   extra_slurm:
     widget: "text_field"
     label: "Additional Slurm Arguments"
@@ -67,6 +59,5 @@ form:
   - num_mem
   - runtime
   - auto_queues
-  - extra_modules
   - extra_slurm
   - job_runner
