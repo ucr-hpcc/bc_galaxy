@@ -23,23 +23,8 @@ export DATAROOT="<%= working_dir.to_s %>"/.galaxy
 # Find available port to run server on
 export port=$(find_port)
 
-
-#Load in modules
-<%- unless context.modules.blank? -%>
-# Purge the module environment to avoid conflicts
+# Ensure galaxy is only module loaded
 module purge
-
-module load <%= context.extra_modules %>
-
-# Load the required modules
-module load <%= context.modules  %>
-
-# List loaded modules
-module list
-<%- end -%>
-
-
-
 module load galaxy
 
 # Define Galaxy Variables
@@ -50,8 +35,9 @@ export EMAIL="${USER}@ondemand.hpcc.ucr.edu"
 export JOB_CONFIG_FILE_PATH="${PWD}/job_conf.xml"
 export JOB_RESOURCE_PARAMS_CONF_FILE_PATH="${PWD}/job_resource_params_conf.xml"
 export WORKFLOW_RESOURCE_PARAMS_CONF_FILE_PATH="${PWD}/workflow_resource_params_conf.xml"
-export ENVIORNMENT_MODULES_MAPPING_FILE_PATH="${PWD}/environment_modules_mapping.yml"
-
+export TOOLS_CONF_FILE_PATH="${DATAROOT}/config/tool_conf.xml"
+export ENVIRONMENT_MAPPING_FILE_PATH="${DATAROOT}/config/environment_modules_mapping.yml"
+export ENVIRONMENT_MODULES_FILE_PATH="${DATAROOT}/tools/modules"
 #For testing local galaxy instances
 #export GALAXY_PATH="<%= BatchConnect::App.from_token(session.token).root.realpath.join("24.1").to_s %>"
 
@@ -59,24 +45,6 @@ echo "GALAXY config file location: '${GALAXY_CONFIG_FILE}'"
 echo "Data location: '${DATAROOT}'"
 
 
-
-#Generare environment modules mapping file
-#extra_modules=(<%= context.extra_modules %>)
-#for module in ${extra_modules}
-#do
-#  (
-#umask 077
-#cat > "${ENVIORNMENT_MODULES_MAPPING_FILE_PATH}" << EOL
-#<?xml version="1.0"?>
-#<tool id="${module}" name="${module}" >
-#  <description>
-#    Please vist our github for examples on how to each this module 
-#    https://github.com/ucr-hpcc/hpcc_slurm_examples
-#   </description>
-#  </tool>
-#EOL
-#  )
-#done
 # Generate Galaxy job configuration file
 (
 umask 077
@@ -88,7 +56,9 @@ cat > "${JOB_CONFIG_FILE_PATH}" << EOL
         <plugin id="local" type="runner" load="galaxy.jobs.runners.local:LocalJobRunner" workers="4"/>
     </plugins>
     <destinations>
-        <destination id="local" runner="local"/>
+      <destination id="local" runner="local">
+        <env id="HPCC_MODULES">${HPCC_MODULES}</env>
+      </destination> 
     </destinations>
 </job_conf>
 EOL
@@ -131,7 +101,7 @@ EOL
 umask 077
 cat > "${GALAXY_CONFIG_FILE}" << EOL
 gravity:
-  galaxy_user : $USER
+  galaxy_user : ${USER}
   gunicorn:
     enable: true
     bind: 0.0.0.0:${port}
@@ -158,6 +128,8 @@ galaxy:
   galaxy_data_manager_data_path: ${DATAROOT}/tool-data
   #Config directory options
   config_dir: ${DATAROOT}/config
+  modules_mapping_files: ${ENVIRONMENT_MAPPING_FILE_PATH}
+  tool_config_file: ${TOOLS_CONF_FILE_PATH}
   #Job stuff
   job_resource_params_file: ${JOB_RESOURCE_PARAMS_CONF_FILE_PATH}
   workflow_resource_params_file: ${WORKFLOW_RESOURCE_PARAMS_CONF_FILE_PATH}
@@ -165,6 +137,16 @@ galaxy:
   job_config_file: ${JOB_CONFIG_FILE_PATH}
   galaxy_url_prefix: /node/${HOSTNAME}/${port}
   dependency_resolvers:
+    - type: modules
+      versionless: true
+      modulecmd: $(which modulecmd)
+      find_by: avail
+      default_indicator: "(default)"
+    - type: modules
+      versionless: false
+      modulecmd: $(which modulecmd)
+      find_by: avail
+      default_indicator: "(default)"
     - type: tool_shed_packages
     - type: galaxy_packages
     - type: conda
@@ -172,12 +154,309 @@ galaxy:
       versionless: true
     - type: conda
       versionless: true
-    - type: modules
-      versionless: true
-      modulecmd: /usr/bin/modulecmd
-      modulepath: /opt/linux/rocky/8.x/x86_64/modules
-      find_by: avail
-      prefetch: true
-      default_indicator: "default"
 EOL
 )
+
+
+# Creates galaxy directory and sets directory permissions
+if [ ! -d "${DATAROOT}" ]; then
+  echo "Creating galaxy directory..."
+  mkdir -p ${DATAROOT}/database/dependencies ${DATAROOT}/tool-data ${DATAROOT}/config ${DATAROOT}/import-dir ${DATAROOT}/tools/modules
+  cp -r ${GALAXY_PATH}/tool-data/* ${DATAROOT}/tool-data/
+  ln -s /bigdata ${DATAROOT}/import-dir/bigdata-galaxy
+  ln -s /rhome ${DATAROOT}/import-dir/rhome-galaxy
+  chmod 770 ${DATAROOT}
+fi
+
+# Generate tool conf file
+if [ ! -f ${TOOLS_CONF_FILE_PATH} ]; then
+ (
+umask 077
+cat > "${TOOLS_CONF_FILE_PATH}" << EOL
+<?xml version='1.0' encoding='utf-8'?>
+<toolbox monitor="true">
+  <section id="getext" name="Get Data">
+    <tool file="data_source/upload.xml" />
+    <tool file="data_source/ucsc_tablebrowser.xml" />
+    <!-- <tool file="data_source/ucsc_tablebrowser_test.xml" /> -->
+    <tool file="data_source/ncbi_datasets.xml" />
+    <tool file="data_source/sra.xml" />
+    <tool file="data_source/ebi_sra.xml" />
+    <tool file="data_source/fly_modencode.xml" />
+    <tool file="data_source/intermine.xml" />
+    <tool file="data_source/flymine.xml" />
+    <!-- <tool file="data_source/flymine_test.xml" /> -->
+    <tool file="data_source/modmine.xml" />
+    <tool file="data_source/mousemine.xml" />
+    <tool file="data_source/ratmine.xml" />
+    <tool file="data_source/yeastmine.xml" />
+    <tool file="data_source/worm_modencode.xml" />
+    <tool file="data_source/wormbase.xml" />
+    <!-- <tool file="data_source/wormbase_test.xml" /> -->
+    <tool file="data_source/eupathdb.xml" />
+    <tool file="data_source/hbvar.xml" />
+  </section>
+  <section id="send" name="Send Data">
+    <tool file="data_export/send.xml" />
+    <tool file="data_export/export_remote.xml" />
+  </section>
+  <section id="collection_operations" name="Collection Operations">
+    <tool file="\${model_tools_path}/unzip_collection.xml" />
+    <tool file="\${model_tools_path}/zip_collection.xml" />
+    <tool file="\${model_tools_path}/filter_failed_collection.xml" />
+    <tool file="\${model_tools_path}/filter_empty_collection.xml" />
+    <tool file="\${model_tools_path}/flatten_collection.xml" />
+    <tool file="\${model_tools_path}/merge_collection.xml" />
+    <tool file="\${model_tools_path}/relabel_from_file.xml" />
+    <tool file="\${model_tools_path}/filter_from_file.xml" />
+    <tool file="\${model_tools_path}/sort_collection_list.xml" />
+    <tool file="\${model_tools_path}/harmonize_two_collections_list.xml" />
+    <tool file="\${model_tools_path}/cross_product_flat.xml" />
+    <tool file="\${model_tools_path}/cross_product_nested.xml" />
+    <tool file="\${model_tools_path}/tag_collection_from_file.xml" />
+    <tool file="\${model_tools_path}/apply_rules.xml" />
+    <tool file="\${model_tools_path}/build_list.xml" />
+    <tool file="\${model_tools_path}/build_list_1.2.0.xml" />
+    <tool file="\${model_tools_path}/extract_dataset.xml" />
+    <tool file="\${model_tools_path}/duplicate_file_to_collection.xml" />
+  </section>
+  <section id="expression_tools" name="Expression Tools">
+    <tool file="expression_tools/parse_values_from_file.xml"/>
+  </section>
+  <section id="liftOver" name="Lift-Over">
+    <tool file="extract/liftOver_wrapper.xml" />
+  </section>
+  <section id="textutil" name="Text Manipulation">
+    <tool file="filters/fixedValueColumn.xml" />
+    <tool file="filters/catWrapper.xml" />
+    <tool file="filters/cutWrapper.xml" />
+    <tool file="filters/mergeCols.xml" />
+    <tool file="filters/convert_characters.xml" />
+    <tool file="filters/CreateInterval.xml" />
+    <tool file="filters/cutWrapper.xml" />
+    <tool file="filters/changeCase.xml" />
+    <tool file="filters/pasteWrapper.xml" />
+    <tool file="filters/remove_beginning.xml" />
+    <tool file="filters/randomlines.xml" />
+    <tool file="filters/headWrapper.xml" />
+    <tool file="filters/tailWrapper.xml" />
+    <tool file="filters/trimmer.xml" />
+    <tool file="filters/wc_gnu.xml" />
+    <tool file="filters/secure_hash_message_digest.xml" />
+  </section>
+  <section id="convert" name="Convert Formats">
+    <tool file="filters/bed2gff.xml" />
+    <tool file="filters/gff2bed.xml" />
+    <tool file="maf/maf_to_bed.xml" />
+    <tool file="maf/maf_to_interval.xml" />
+    <tool file="maf/maf_to_fasta.xml" />
+    <tool file="filters/sff_extractor.xml" />
+    <tool file="filters/wig_to_bigwig.xml" />
+    <tool file="filters/bed_to_bigbed.xml" />
+  </section>
+  <section id="filter" name="Filter and Sort">
+    <tool file="stats/filtering_1_1_0.xml" />
+    <tool file="stats/filtering.xml" />
+    <tool file="filters/sorter.xml" />
+    <tool file="filters/grep.xml" />
+    <tool file="filters/grep_1.0.1.xml"/>
+    <label id="gff" text="GFF" />
+    <tool file="filters/gff/extract_GFF_Features.xml" />
+    <tool file="filters/gff/gff_filter_by_attribute.xml" />
+    <tool file="filters/gff/gff_filter_by_feature_count.xml" />
+    <tool file="filters/gff/gtf_filter_by_attribute_values_list.xml" />
+  </section>
+  <section id="group" name="Join, Subtract and Group">
+    <tool file="filters/joiner.xml" />
+    <tool file="filters/compare.xml" />
+    <tool file="stats/grouping.xml" />
+  </section>
+  <section id="fetchAlignSeq" name="Fetch Alignments/Sequences">
+    <tool file="maf/interval2maf_pairwise.xml" />
+    <tool file="maf/maf_split_by_species.xml" />
+    <tool file="maf/interval_maf_to_merged_fasta.xml" />
+    <tool file="maf/genebed_maf_to_fasta.xml" />
+    <tool file="maf/maf_stats.xml" />
+    <tool file="maf/maf_thread_for_species.xml" />
+    <tool file="maf/maf_limit_to_species.xml" />
+    <tool file="maf/maf_limit_size.xml" />
+    <tool file="maf/maf_by_block_number.xml" />
+    <tool file="maf/maf_reverse_complement.xml" />
+    <tool file="maf/maf_filter.xml" />
+  </section>
+  <section id="bxops" name="Operate on Genomic Intervals" version="">
+    <tool file="filters/wiggle_to_simple.xml" />
+    <tool file="stats/aggregate_binned_scores_in_intervals.xml" />
+    <tool file="filters/ucsc_gene_bed_to_exon_bed.xml" />
+  </section>
+  <section id="stats" name="Statistics">
+    <tool file="stats/gsummary.xml" />
+    <tool file="filters/uniq.xml" />
+  </section>
+  <section id="plots" name="Graph/Display Data">
+    <tool file="maf/vcf_to_maf_customtrack.xml" />
+  </section>
+  <section id="hgv" name="Phenotype Association">
+    <tool file="phenotype_association/sift.xml" />
+    <tool file="phenotype_association/linkToGProfile.xml" />
+    <tool file="phenotype_association/linkToDavid.xml" />
+    <tool file="phenotype_association/ldtools.xml" />
+    <tool file="phenotype_association/master2pg.xml" />
+  </section>
+  <section id="modules" name="Environment modules">
+    <!--DONTREMOVE--> 
+  </section>
+</toolbox>
+EOL
+) 
+fi
+
+# Creates mapping file between tools and modules
+if [[ ! -f "${ENVIRONMENT_MAPPING_FILE_PATH}" ]]; then
+  echo "Creating environment modules mapping file path..."  
+(
+umask 077
+cat > "${ENVIRONMENT_MAPPING_FILE_PATH}" << EOL
+#DONTREMOVE
+EOL
+)
+fi
+
+# Extract list of modules currently available on the cluster
+MODULES="$(module avail -w 1 --output= 2>&1)"
+echo "Creating/Updating module tools xml files..."
+for module in ${MODULES}
+do
+  module_name="$(echo ${module} | cut -d "/" -f1 )"
+  version="$(echo ${module} | cut -d "/" -f2 )"
+  
+  # If the module doesn't exist in the user's current tools directory then create the file for the module
+  if ! [ -f "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" ]; then
+    echo "Creating tool xml file for ${module_name}/${version}"
+(
+umask 077
+cat > "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" << EOL
+<?xml version="1.0"?>
+<tool id="${module_name}" name="${module_name}" version="${version}">
+  <requirements>
+    <requirement type="package" version="${version}">${module_name}</requirement>
+  </requirements>
+  <description>
+    Environment module ${module_name}/${version}
+  </description>
+   <stdio>
+    <exit_code range="1:" leveling="log" description="See log file for extra info" /> 
+  </stdio>
+  <inputs>
+     <conditional name="upload_type">
+        <param name="data_type" type="select" label="What upload type would you like to use?">
+            <option value="dataset" selected="true">Upload file/files as a dataset?</option>
+            <option value="raw">Specify location where file lies on the cluster?</option>
+        </param>
+        <when value="dataset">
+            <param name="data_input" type="data" optional="false" multiple="true" label="Input files" /> 
+        </when>    
+        <when value="raw">
+            <param name="raw_input" type="file" optional="false" multiple="true" label="Input files" help="If you are specifying raw file paths, please separate them with ','"/> 
+        </when>
+     </conditional>
+     <conditional name="how">
+         <param name="run_type" type="select" label="How to process file/files">
+             <option value="single" selected="true">Invdividually: Run the command individually for each file.</option>
+             <option value="group">Group: Run the command once and use all files as input.</option>
+        </param>
+        <when value="single">
+        </when>
+        <when value="group">
+        </when>
+     </conditional>     
+    <param name="output_dir" type="text" optional="false" label="Output directory" help="Directory on the cluster where to store the output results. Must provide the full path." />
+    <param name="command" type="text" optional="false" label="Command" help="The command line instruction to run." />
+  </inputs> 
+  <outputs>
+        <data name="output-files" auto_format="true">
+          <discover_datasets directory="temp-output" pattern="__designation__" visible="true" />
+        </data>
+  </outputs> 
+  <command><![CDATA[
+      #if not \$output_dir.endswith("/"):
+        #set \$output_dir = str(\$output_dir) + "/"
+      #end if
+      mkdir temp-output;
+      #if str(\$upload_type.data_type) == "dataset":
+        #if str(\$how.run_type) == "single":
+            #for \$file in \$upload_type.data_input:
+                touch \$file.name; 
+                cat \$file > \$file.name; 
+                #set \$old_command = \$command
+                #set \$command = \$command.replace("\$input", str(\$file.name))
+                #set \$command = \$command.replace("\$output", str(\$output_dir))
+                \$command;
+                #set \$command = \$old_command
+            #end for 
+        #elif str(\$how.run_type) == "group":
+            #set \$group_input = ""
+            #for \$file in \$upload_type.data_input:
+                touch \$file.name; 
+                cat \$file > \$file.name;
+                #set \$group_input += str(\$file.name) + " "
+            #end for
+            #set \$command = \$command.replace("\$input", str(\$group_input))
+            #set \$command = \$command.replace("\$output", str(\$output_dir))
+            \$command;
+        #end if
+      #elif str(\$upload_type.data_type) == "raw":
+        #set \$raw_input = \$upload_type.raw_input.split(",")
+        #if str(\$how.run_type) == "single":
+            #for \$file in \$raw_input:
+                #set \$old_command = \$command
+                #set \$command = \$command.replace("\$input", str(\$file))
+                #set \$command = \$command.replace("\$output", str(\$output_dir))
+                \$command;
+                #set \$command = \$old_command
+            #end for 
+        #elif str(\$how.run_type) == "group":
+            #set \$group_input = ""
+            #for \$file in \$raw_input:
+                #set \$group_input += str(\$file) + " "
+            #end for
+            #set \$command = \$command.replace("\$input", str(\$group_input))
+            #set \$command = \$command.replace("\$output", str(\$output_dir))
+            \$command;
+        #end if
+      #end if
+      cp -r \$output_dir* temp-output/
+  ]]></command>
+  <help>
+        **IMPORTANT**: This is a **wrapper tool** to run most tools UCR HPCC provides via Galaxy. This wrapper may not work for each tool, as each tool is unique and might need to be configured differently. If you have experience creating/modifying Galaxy tools, then you can tweak this and all other environment module wrappers provided for Galaxy by editing it's respective tool xml file found in your specified **Galaxy Database** directory under tools/modules.  
+
+          **How to use**:
+
+                **What upload type would you like to use**: You can either provide a 'Dataset' which is a Galaxy specific format file or provide the full raw file path of a file on the cluster to be used.
+
+                **How to process file or files**: You can either process files in groups or individually. Below are examples on what each option does using the fastqc tool.
+                        
+                        - Individually: fastqc input1, fastqc input2, ... fastqc inputN.
+                                - Runs the tool individually for each input file.
+                        - Group: fastqc input1 input2 ... inputN etc.
+                                - Groups all files into one input to be passed to the tool.	
+                **Output directory**: This is the full raw directory path where you would like to save your results to.
+
+
+                **Command**: This is the specific command line tool you are going to run. Please specify in inputs or outputs as \$input or \$output. Below is an example using the fastqc tool.
+
+                        - **Example: fastqc \$input -o \$output**
+
+                        Note: If you are going to process multiple files, you still would only specify one \$input variable as the wrapper has logic to handle processing multiple files. 
+        
+          
+  </help> 
+</tool>
+EOL
+)
+# Add module to tools configuration
+  sed -i 's|<!--DONTREMOVE-->|<tool file="'${ENVIRONMENT_MODULES_FILE_PATH}'/'${module_name}'_'${version}'.xml" />\n    <!--DONTREMOVE-->|g' ${TOOLS_CONF_FILE_PATH}
+# Add module to the mapping file
+  sed -i 's|#DONTREMOVE|- form:\n\     name: '${module_name}'\n     version: "'${version}'"\n  to:\n     name: '${module_name}'\n     version: "'${version}'"\n#DONTREMOVE|g' ${ENVIRONMENT_MAPPING_FILE_PATH}
+  fi
+done
