@@ -1,7 +1,7 @@
 ---
 cluster: "hpcc"
 attributes:
-  modules: "miniconda3/"
+  modules: "miniconda3/ slurm/ slurm-drmaa/ workspace/"
   bc_account: null
   bc_num_slots: 1
   num_cores:
@@ -13,7 +13,7 @@ attributes:
   num_mem:
     widget: "number_field"
     label: "Memory in GB"
-    value: "8"
+    value: 8
     min: 1
     id: 'num_mem'
   auto_queues:
