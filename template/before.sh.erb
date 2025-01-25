@@ -2,7 +2,6 @@
 [[ $(type -t module) == "function" ]] && export -f module
 
 
-
 #Set working directory
 
 <%
@@ -23,9 +22,10 @@ export DATAROOT="<%= working_dir.to_s %>"/.galaxy
 # Find available port to run server on
 export port=$(find_port)
 
-# Ensure galaxy is only module loaded
-module purge
-module load galaxy
+# Ensure only required galaxy modules are loaded
+module purge -f
+module load galaxy/24.1
+module load <%= context.modules %>
 
 # Define Galaxy Variables
 export GALAXY_PATH="$(dirname $(which run.sh))"
@@ -38,27 +38,43 @@ export WORKFLOW_RESOURCE_PARAMS_CONF_FILE_PATH="${PWD}/workflow_resource_params_
 export TOOLS_CONF_FILE_PATH="${DATAROOT}/config/tool_conf.xml"
 export ENVIRONMENT_MAPPING_FILE_PATH="${DATAROOT}/config/environment_modules_mapping.yml"
 export ENVIRONMENT_MODULES_FILE_PATH="${DATAROOT}/tools/modules"
-#For testing local galaxy instances
-#export GALAXY_PATH="<%= BatchConnect::App.from_token(session.token).root.realpath.join("24.1").to_s %>"
 
 echo "GALAXY config file location: '${GALAXY_CONFIG_FILE}'"
 echo "Data location: '${DATAROOT}'"
-
+echo "Galaxy path:    '${GALAXY_PATH}'"
 
 # Generate Galaxy job configuration file
 (
 umask 077
 cat > "${JOB_CONFIG_FILE_PATH}" << EOL
 <?xml version="1.0"?>
-<!-- A sample job config that explicitly configures job running the way it is configured by default (if there is no explicit config). -->
 <job_conf>
+    <resources>
+        <group id="basic">cores,time</group>
+    </resources>
     <plugins>
-        <plugin id="local" type="runner" load="galaxy.jobs.runners.local:LocalJobRunner" workers="4"/>
+        <plugin id="local" type="runner" load="galaxy.jobs.runners.local:LocalJobRunner"/>
+        <plugin id="slurm" type="runner" load="galaxy.jobs.runners.slurm:SlurmJobRunner">
+          <param id="drmaa_library_path">${DRMAA_LIBRARY_PATH}</param>
+        </plugin>
+        <plugin id="dynamic" type="runner" >
+          <param id="rules_module">galaxy.jobs.rules</param>
+        </plugin>
     </plugins>
-    <destinations>
-      <destination id="local" runner="local">
-        <env id="HPCC_MODULES">${HPCC_MODULES}</env>
-      </destination> 
+    <destinations default="<%= context.job_runner %>">
+        <destination id="dynamic_cores_time" runner="dynamic">
+            <param id="type">python</param>
+            <param id="function">dynamic_cores_time</param>
+        </destination>
+        <destination id="slurm" runner="slurm">
+            <env id="HPCC_MODULES">${HPCC_MODULES}</env>
+            <env id="SCRATCH">${SCRATCH}</env>
+            <param id="tmp_dir">${SCRATCH}</param>
+        </destination>
+        <destination id="local" runner="local">
+            <param id="local_slots"><%= context.num_cores %></param>
+            <env id="HPCC_MODULES">${HPCC_MODULES}</env>
+        </destination>
     </destinations>
 </job_conf>
 EOL
@@ -69,8 +85,8 @@ EOL
 umask 077
 cat > "${JOB_RESOURCE_PARAMS_CONF_FILE_PATH}" << EOL
 <parameters>
-  <param label="Cores" name="cores" type="integer" min="1" max="28" value="1" help="Number of processing cores, 'ppn' value (1-28). Leave blank to use default value." />
-  <param label="Walltime" name="time" type="integer" size="3" min="1" max="24" value="1" help="Maximum job time in hours, 'walltime' value (1-24). Leave blank to use default value." />
+  <param label="Cores" name="cores" type="integer" min="1" max="<%= context.num_cores %>" value="1" help="Number of processing cores, Leave blank to use default value." />
+  <param label="Memory" name="memory" type="integer" min="1" max="<%= context.num_mem %>" value="1" help="Memory size in gigabytes, Leave blank to use default value." />
 </parameters>
 EOL
 )
@@ -136,6 +152,8 @@ galaxy:
   admin_users: ${EMAIL}
   job_config_file: ${JOB_CONFIG_FILE_PATH}
   galaxy_url_prefix: /node/${HOSTNAME}/${port}
+  #Auto migrate database to newest version
+  database_auto_migrate: true
   dependency_resolvers:
     - type: modules
       versionless: true
@@ -156,6 +174,7 @@ galaxy:
       versionless: true
 EOL
 )
+
 
 
 # Creates galaxy directory and sets directory permissions
