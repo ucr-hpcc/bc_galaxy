@@ -1,16 +1,22 @@
 cd "$(dirname "$0")"
 
-VERSION="24.1"
+# Set current version
+VERSION="24.1.4"
 
 # Install Galaxy
-if [[ ! -e galaxy ]]; then
-    git clone git@github.com:galaxyproject/galaxy.git
-    mv galaxy ${VERSION}
-    cp -r custom-scripts ${VERSION}
+if [[ ! -e v${VERSION}.tar.gz ]]; then
+    wget "https://github.com/galaxyproject/galaxy/archive/refs/tags/v${VERSION}.tar.gz"
 fi
 
+tar xvf "v${VERSION}.tar.gz"
+cp -r custom-scripts galaxy-${VERSION}
+rm "v${VERSION}.tar.gz"
+
+mv galaxy-${VERSION} ${VERSION}
 cd ${VERSION}
-git checkout release_${VERSION}
+
+# GCLIB is required later on so load gcc before hand
+module load node-js
 
 # Create virtualenv
 module load miniconda3
@@ -19,6 +25,9 @@ python -m venv .venv
 # Install dependencies
 # Retrieved from line 1-54 in https://github.com/galaxyproject/galaxy/blob/release_19.09/run.sh
 . ./scripts/common_startup_functions.sh
+
+# Required in order for galaxy to interface with DRMAA https://docs.galaxyproject.org/en/master/admin/cluster.html#dependencies
+$PWD/.venv/bin/python -m pip install drmaa
 
 # If there is a file that defines a shell environment specific to this
 # instance of Galaxy, source the file.
@@ -65,12 +74,10 @@ if [ "$INITIALIZE_TOOL_DEPENDENCIES" -eq 1 ]; then
     python ./scripts/manage_tool_dependencies.py init_if_needed
 fi
 
-rm -rf .git
-
 # Add custom scripts to configure Galaxy for ondemand use
 ln -s $PWD/custom-scripts/custom_destinations.py $PWD/lib/galaxy/jobs/rules/destinations.py
 
-#Remove galaxy remote user and replace with custom remote user
+# Remove galaxy remote user and replace with custom remote user
 rm $PWD/lib/galaxy/web/framework/middleware/remoteuser.py
 ln -s $PWD/custom-scripts/custom_remote_user.py $PWD/lib/galaxy/web/framework/middleware/remoteuser.py
 
