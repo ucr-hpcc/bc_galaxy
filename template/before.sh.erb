@@ -24,7 +24,7 @@ export port=$(find_port)
 
 # Ensure only required galaxy modules are loaded
 module purge -f
-module load galaxy/24.1
+module load galaxy
 module load <%= context.modules %>
 
 # Define Galaxy Variables
