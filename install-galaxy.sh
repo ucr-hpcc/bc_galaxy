@@ -1,7 +1,7 @@
 cd "$(dirname "$0")"
 
 # Set current version
-VERSION="24.1.4"
+VERSION="test.24.1.3"
 
 # Install Galaxy
 if [[ ! -e v${VERSION}.tar.gz ]]; then
@@ -14,9 +14,6 @@ rm "v${VERSION}.tar.gz"
 
 mv galaxy-${VERSION} ${VERSION}
 cd ${VERSION}
-
-# GCLIB is required later on so load gcc before hand
-module load node-js
 
 # Create virtualenv
 module load miniconda3
@@ -73,6 +70,8 @@ if [ "$INITIALIZE_TOOL_DEPENDENCIES" -eq 1 ]; then
     # Install Conda environment if needed.
     python ./scripts/manage_tool_dependencies.py init_if_needed
 fi
+
+echo "Configuring custom scripts"
 
 # Add custom scripts to configure Galaxy for ondemand use
 ln -s $PWD/custom-scripts/custom_destinations.py $PWD/lib/galaxy/jobs/rules/destinations.py
