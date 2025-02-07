@@ -1,7 +1,7 @@
 cd "$(dirname "$0")"
 
 # Set current version
-VERSION="test.24.1.3"
+VERSION="24.1.4"
 
 # Install Galaxy
 if [[ ! -e v${VERSION}.tar.gz ]]; then
