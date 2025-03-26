@@ -38,6 +38,7 @@ export WORKFLOW_RESOURCE_PARAMS_CONF_FILE_PATH="${PWD}/workflow_resource_params_
 export TOOLS_CONF_FILE_PATH="${DATAROOT}/config/tool_conf.xml"
 export ENVIRONMENT_MAPPING_FILE_PATH="${DATAROOT}/config/environment_modules_mapping.yml"
 export ENVIRONMENT_MODULES_FILE_PATH="${DATAROOT}/tools/modules"
+export RUNNER="<%= context.job_runner %>"
 
 echo "GALAXY config file location: '${GALAXY_CONFIG_FILE}'"
 echo "Data location: '${DATAROOT}'"
@@ -50,41 +51,43 @@ cat > "${JOB_CONFIG_FILE_PATH}" << EOL
 <?xml version="1.0"?>
 <job_conf>
     <resources>
-        <group id="basic">cores,time</group>
+        <group id="basic">cores,memory,runner</group>
     </resources>
+   <tools>
+       <tool id="bed2gff1" destination="dynamic_cores_time" resources="basic"/> 
+   </tools> 
     <plugins>
         <plugin id="local" type="runner" load="galaxy.jobs.runners.local:LocalJobRunner"/>
         <plugin id="slurm" type="runner" load="galaxy.jobs.runners.slurm:SlurmJobRunner">
           <param id="drmaa_library_path">${DRMAA_LIBRARY_PATH}</param>
         </plugin>
         <plugin id="dynamic" type="runner" >
+          <param id="runner"><%= context.job_runner %></param>
           <param id="rules_module">galaxy.jobs.rules</param>
         </plugin>
     </plugins>
-    <destinations default="<%= context.job_runner %>">
-        <destination id="dynamic_cores_time" runner="dynamic">
+    <destinations default="dynamic">
+        <destination id="dynamic" runner="dynamic">
             <param id="type">python</param>
             <param id="function">dynamic_cores_time</param>
         </destination>
         <destination id="slurm" runner="slurm">
             <env id="HPCC_MODULES">${HPCC_MODULES}</env>
-            <env id="SCRATCH">${SCRATCH}</env>
             <param id="tmp_dir">${SCRATCH}</param>
         </destination>
         <destination id="local" runner="local">
             <param id="local_slots"><%= context.num_cores %></param>
-            <env id="HPCC_MODULES">${HPCC_MODULES}</env>
         </destination>
     </destinations>
 </job_conf>
 EOL
 )
 
-# Generate Galaxy job resource parameter configuration file
 (
 umask 077
 cat > "${JOB_RESOURCE_PARAMS_CONF_FILE_PATH}" << EOL
 <parameters>
+  <param name="runner" type="hidden" value="<%= context.job_runner %>" />
   <param label="Cores" name="cores" type="integer" min="1" max="<%= context.num_cores %>" value="1" help="Number of processing cores, Leave blank to use default value." />
   <param label="Memory" name="memory" type="integer" min="1" max="<%= context.num_mem %>" value="1" help="Memory size in gigabytes, Leave blank to use default value." />
 </parameters>
@@ -132,11 +135,15 @@ galaxy:
   allow_user_creation: false
   allow_user_deletion: true
   allow_user_impersonation: true
-  #Tool shed and data config options 
+  real_system_username: user
+  show_user_prepopulate_form: true
+  #Tool shed and data config options
   tool_dependency_dir: ${DATAROOT}/database/dependencies
   tool_data_path: ${DATAROOT}/tool-data
   #Import options
   library_import_dir: ${DATAROOT}/import-dir/
+  user_library_import_dir: ${DATAROOT}/import-dir/users/
+  user_library_import_dir_auto_creation: true
   user_library_import_symlink_allowlist: /bigdata,/rhome
   allow_path_paste: true
   #Data manager config options
@@ -180,12 +187,24 @@ EOL
 # Creates galaxy directory and sets directory permissions
 if [ ! -d "${DATAROOT}" ]; then
   echo "Creating galaxy directory..."
-  mkdir -p ${DATAROOT}/database/dependencies ${DATAROOT}/tool-data ${DATAROOT}/config ${DATAROOT}/import-dir ${DATAROOT}/tools/modules
+  mkdir -p ${DATAROOT}/database/dependencies \
+    ${DATAROOT}/tool-data \
+    ${DATAROOT}/config \
+    ${DATAROOT}/import-dir \
+    ${DATAROOT}/tools/modules \
+    ${DATAROOT}/import-dir/users
   cp -r ${GALAXY_PATH}/tool-data/* ${DATAROOT}/tool-data/
   ln -s /bigdata ${DATAROOT}/import-dir/bigdata-galaxy
   ln -s /rhome ${DATAROOT}/import-dir/rhome-galaxy
   chmod 770 ${DATAROOT}
 fi
+
+for user in $(ls "${DATAROOT}/import-dir/users/"); do
+  if [ ! -L "${DATAROOT}/import-dir/users/${user}/bigdata-galaxy" ] && [ ! -L "${DATAROOT}/import-dir/users/${user}/rhome-galaxy" ]; then
+    ln -s /bigdata "${DATAROOT}/import-dir/users/${user}/bigdata-galaxy"
+    ln -s /rhome "${DATAROOT}/import-dir/users/${user}/rhome-galaxy"
+  fi
+done
 
 # Generate tool conf file
 if [ ! -f ${TOOLS_CONF_FILE_PATH} ]; then
@@ -356,10 +375,11 @@ do
 umask 077
 cat > "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" << EOL
 <?xml version="1.0"?>
-<tool id="${module_name}" name="${module_name}" version="${version}">
+<tool id="${module_name}" name="${module_name}" version="${module_name}/${version}" destination="hpcc">
   <requirements>
     <requirement type="package" version="${version}">${module_name}</requirement>
   </requirements>
+  <code file="${GALAXY_PATH}/custom-scripts/custom_tool_form_utils.py" />
   <description>
     Environment module ${module_name}/${version}
   </description>
@@ -367,6 +387,20 @@ cat > "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" << EOL
     <exit_code range="1:" leveling="log" description="See log file for extra info" /> 
   </stdio>
   <inputs>
+     <conditional name="runner">
+      <param label="Slurm compatible" name="runner" type="select" dynamic_options="determine_runner()" multiple="false" refresh_on_change="true">
+        <option value="local" selected="true">No</option>
+        <option value="slurm">Yes</option>
+      </param>
+      <when value="slurm">
+        <param name="core" type="integer" value="2" min="2" label="Number of cores"/>
+        <param name="memory" type="integer" value="1024" min="1024" label="Memory in KB" />
+        <param name="runtime" type="text" label="Job runtime" help="In the format of DD-HH:MM:SS. Eg. 2 days, 13 hours, 37 minutes, 42 seconds would be '2-13:37:42'." />
+        <param name="partition" type="select" label="Partition" dynamic_options="partitions_available()" multiple="false" />
+      </when>
+      <when value="local">
+      </when>
+     </conditional>
      <conditional name="upload_type">
         <param name="data_type" type="select" label="What upload type would you like to use?">
             <option value="dataset" selected="true">Upload file/files as a dataset?</option>
@@ -374,7 +408,7 @@ cat > "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" << EOL
         </param>
         <when value="dataset">
             <param name="data_input" type="data" optional="false" multiple="true" label="Input files" /> 
-        </when>    
+        </when>
         <when value="raw">
             <param name="raw_input" type="file" optional="false" multiple="true" label="Input files" help="If you are specifying raw file paths, please separate them with ','"/> 
         </when>
@@ -388,10 +422,10 @@ cat > "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" << EOL
         </when>
         <when value="group">
         </when>
-     </conditional>     
+     </conditional>
     <param name="output_dir" type="text" optional="false" label="Output directory" help="Directory on the cluster where to store the output results. Must provide the full path." />
     <param name="command" type="text" optional="false" label="Command" help="The command line instruction to run." />
-  </inputs> 
+  </inputs>
   <outputs>
         <data name="output-files" auto_format="true">
           <discover_datasets directory="temp-output" pattern="__designation__" visible="true" />
