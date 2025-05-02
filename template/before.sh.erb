@@ -53,9 +53,6 @@ cat > "${JOB_CONFIG_FILE_PATH}" << EOL
     <resources>
         <group id="basic">cores,memory,runner</group>
     </resources>
-   <tools>
-       <tool id="bed2gff1" destination="dynamic_cores_time" resources="basic"/> 
-   </tools> 
     <plugins>
         <plugin id="local" type="runner" load="galaxy.jobs.runners.local:LocalJobRunner"/>
         <plugin id="slurm" type="runner" load="galaxy.jobs.runners.slurm:SlurmJobRunner">
@@ -76,6 +73,8 @@ cat > "${JOB_CONFIG_FILE_PATH}" << EOL
             <param id="tmp_dir">${SCRATCH}</param>
         </destination>
         <destination id="local" runner="local">
+            <env id="HPCC_MODULES">${HPCC_MODULES}</env>
+            <param id="tmp_dir">${SCRATCH}</param>
             <param id="local_slots"><%= context.num_cores %></param>
         </destination>
     </destinations>
@@ -375,7 +374,7 @@ do
 umask 077
 cat > "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" << EOL
 <?xml version="1.0"?>
-<tool id="${module_name}" name="${module_name}" version="${module_name}/${version}" destination="hpcc">
+<tool id="${module_name}" name="${module_name}" version="${module_name}/${version}">
   <requirements>
     <requirement type="package" version="${version}">${module_name}</requirement>
   </requirements>
@@ -387,16 +386,16 @@ cat > "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" << EOL
     <exit_code range="1:" leveling="log" description="See log file for extra info" /> 
   </stdio>
   <inputs>
-     <conditional name="runner">
-      <param label="Slurm compatible" name="runner" type="select" dynamic_options="determine_runner()" multiple="false" refresh_on_change="true">
+     <conditional name="selected_runner">
+      <param label="Slurm compatible" name="runner" type="select" dynamic_options="determine_runner()" multiple="false">
         <option value="local" selected="true">No</option>
         <option value="slurm">Yes</option>
       </param>
       <when value="slurm">
-        <param name="core" type="integer" value="2" min="2" label="Number of cores"/>
-        <param name="memory" type="integer" value="1024" min="1024" label="Memory in KB" />
+        <param name="core" type="integer" value="2" min="2" optional="false" label="Number of cores"/>
+        <param name="memory" type="integer" value="1024" min="1024" optional="false" label="Memory in MB" />
         <param name="runtime" type="text" label="Job runtime" help="In the format of DD-HH:MM:SS. Eg. 2 days, 13 hours, 37 minutes, 42 seconds would be '2-13:37:42'." />
-        <param name="partition" type="select" label="Partition" dynamic_options="partitions_available()" multiple="false" />
+        <param name="partition" type="select" label="Partition" refresh_on_change="true" optional="false" dynamic_options="partitions_available()" multiple="false" />
       </when>
       <when value="local">
       </when>
