@@ -2,4 +2,5 @@
 
 # Start Galaxy
 echo "Starting up Galaxy..."
+source ${GALAXY_PATH}/.venv/bin/activate
 sh ${GALAXY_PATH}/run.sh --no-create-venv --skip-client-build --skip-wheels
