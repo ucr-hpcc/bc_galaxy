@@ -1,33 +1,56 @@
 cd "$(dirname "$0")"
 
 # Set current version
-VERSION="24.1.4"
+VERSION="24.2.4"
 
-# Install Galaxy
-if [[ ! -e v${VERSION}.tar.gz ]]; then
-    wget "https://github.com/galaxyproject/galaxy/archive/refs/tags/v${VERSION}.tar.gz"
+# Check if custom scripts directory exists
+if [[ ! -d "custom-scripts/$VERSION" ]]; then
+	mkdir -p "custom-scripts/$VERSION"
 fi
 
-tar xvf "v${VERSION}.tar.gz"
-cp -r custom-scripts galaxy-${VERSION}
-rm "v${VERSION}.tar.gz"
 
-mv galaxy-${VERSION} ${VERSION}
-cd ${VERSION}
+# Install Galaxy
+if [[ ! -e v$VERSION.tar.gz ]]; then
+    echo "Downloading custom galaxy scripts from UCR HPCC repo..."
+    wget "https://github.com/galaxyproject/galaxy/archive/refs/tags/v$VERSION.tar.gz"
+
+# Get custom scripts from UCR HPCC github
+    wget -O "custom-scripts/$VERSION/custom_remote_user.py" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/custom_remote_user.py"
+    wget -O "custom-scripts/$VERSION/custom_destinations.py" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/custom_destinations.py"
+    wget -O "custom-scripts/$VERSION/custom_tool_form_utils.py" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/custom_tool_form_utils.py"
+fi
+
+
+# Unzip, remove tar, and rename galaxy to version number
+tar xvf "v$VERSION.tar.gz"
+
+rm "v$VERSION.tar.gz"
+
+mv galaxy-$VERSION $VERSION
+
+cd $VERSION
+
+# Check parcel version and downgrade to allow for building with older GCLIB
+# NOTE: Issue seems resolved in upstream repo, leaving this here for now just in case issue appears again later.
+# for vis_tool in $(ls  -d config/plugins/visualizations/*/); do
+#	if [[ -f "$vis_tool/package.json" ]]; then
+#		sed -i -E 's#"parcel:*.*("|"\^)([0-9]|[0-9][0-9])\.([0-9]|[0-9][0-9])\.([0-9]|[0-9][0-9])"#"parcel": "^2.8.3"#g' $vis_tool/package.json
+#	fi
+#done
 
 # Create virtualenv
-module load miniconda3
+module purge
+
+# Load older miniconda version as default one causes issues with SQLlite
+module load miniconda3/py39_4.10.3
+
 python -m venv .venv
 
-# Install dependencies
+# Install dependencies without creating virtual env, as this was created in the step before
 # Retrieved from line 1-54 in https://github.com/galaxyproject/galaxy/blob/release_19.09/run.sh
-. ./scripts/common_startup_functions.sh
+. ./scripts/common_startup_functions.sh --no-create-venv
 
-# Required in order for galaxy to interface with DRMAA https://docs.galaxyproject.org/en/master/admin/cluster.html#dependencies
-$PWD/.venv/bin/python -m pip install drmaa
-
-# If there is a file that defines a shell environment specific to this
-# instance of Galaxy, source the file.
+# If there is a file that defines a shell environment specific to this instance of Galaxy, source the file.
 if [ -z "$GALAXY_LOCAL_ENV_FILE" ];
 then
     GALAXY_LOCAL_ENV_FILE='./config/local_env.sh'
@@ -51,6 +74,7 @@ setup_python
 
 if [ ! -z "$GALAXY_RUN_WITH_TEST_TOOLS" ];
 then
+    echo "Running galaxy with test tools..."
     export GALAXY_CONFIG_OVERRIDE_TOOL_CONFIG_FILE="test/functional/tools/sample_tool_conf.xml"
     export GALAXY_CONFIG_ENABLE_BETA_WORKFLOW_MODULES="true"
     export GALAXY_CONFIG_OVERRIDE_ENABLE_BETA_TOOL_FORMATS="true"
@@ -61,23 +85,25 @@ fi
 
 
 if [ -n "$GALAXY_UNIVERSE_CONFIG_DIR" ]; then
+    echo "Building galaxy universe config..."
     python ./scripts/build_universe_config.py "$GALAXY_UNIVERSE_CONFIG_DIR"
 fi
 
 set_galaxy_config_file_var
 
-if [ "$INITIALIZE_TOOL_DEPENDENCIES" -eq 1 ]; then
-    # Install Conda environment if needed.
-    python ./scripts/manage_tool_dependencies.py init_if_needed
-fi
+# Install slurm drmaa python package into galaxy virtual environment
+$PWD/.venv/bin/python -m pip install drmaa
 
-echo "Configuring custom scripts"
+cd ..
 
 # Add custom scripts to configure Galaxy for ondemand use
-ln -s $PWD/custom-scripts/custom_destinations.py $PWD/lib/galaxy/jobs/rules/destinations.py
+echo "Configuring custom scripts..."
+ln -s $PWD/custom-scripts/$VERSION/custom_destinations.py $PWD/$VERSION/lib/galaxy/jobs/rules/destinations.py
+mkdir -p $PWD/$VERSION/custom-scripts
+ln -s $PWD/custom-scripts/$VERSION/custom_tool_form_utils.py $PWD/$VERSION/custom-scripts/custom_tool_form_utils.py
 
 # Remove galaxy remote user and replace with custom remote user
-rm $PWD/lib/galaxy/web/framework/middleware/remoteuser.py
-ln -s $PWD/custom-scripts/custom_remote_user.py $PWD/lib/galaxy/web/framework/middleware/remoteuser.py
+rm $VERSION/lib/galaxy/web/framework/middleware/remoteuser.py
+ln -s $PWD/custom-scripts/$VERSION/custom_remote_user.py $PWD/$VERSION/lib/galaxy/web/framework/middleware/remoteuser.py
 
 echo "Setup finished..."
