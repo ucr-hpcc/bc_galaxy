@@ -3,7 +3,6 @@
 
 
 #Set working directory
-
 <%
 
 working_dir = Pathname.new(context.working_dir)
@@ -33,7 +32,6 @@ export GALAXY_ROOT_DIR=${GALAXY_PATH}
 export GALAXY_CONFIG_FILE="${PWD}/galaxy.yml"
 export EMAIL="${USER}@ondemand.hpcc.ucr.edu"
 export JOB_CONFIG_FILE_PATH="${PWD}/job_conf.xml"
-export JOB_RESOURCE_PARAMS_CONF_FILE_PATH="${PWD}/job_resource_params_conf.xml"
 export WORKFLOW_RESOURCE_PARAMS_CONF_FILE_PATH="${PWD}/workflow_resource_params_conf.xml"
 export TOOLS_CONF_FILE_PATH="${DATAROOT}/config/tool_conf.xml"
 export ENVIRONMENT_MAPPING_FILE_PATH="${DATAROOT}/config/environment_modules_mapping.yml"
@@ -50,9 +48,6 @@ umask 077
 cat > "${JOB_CONFIG_FILE_PATH}" << EOL
 <?xml version="1.0"?>
 <job_conf>
-    <resources>
-        <group id="basic">cores,memory,runner</group>
-    </resources>
     <plugins>
         <plugin id="local" type="runner" load="galaxy.jobs.runners.local:LocalJobRunner"/>
         <plugin id="slurm" type="runner" load="galaxy.jobs.runners.slurm:SlurmJobRunner">
@@ -79,17 +74,6 @@ cat > "${JOB_CONFIG_FILE_PATH}" << EOL
         </destination>
     </destinations>
 </job_conf>
-EOL
-)
-
-(
-umask 077
-cat > "${JOB_RESOURCE_PARAMS_CONF_FILE_PATH}" << EOL
-<parameters>
-  <param name="runner" type="hidden" value="<%= context.job_runner %>" />
-  <param label="Cores" name="cores" type="integer" min="1" max="<%= context.num_cores %>" value="1" help="Number of processing cores, Leave blank to use default value." />
-  <param label="Memory" name="memory" type="integer" min="1" max="<%= context.num_mem %>" value="1" help="Memory size in gigabytes, Leave blank to use default value." />
-</parameters>
 EOL
 )
 
@@ -153,7 +137,6 @@ galaxy:
   modules_mapping_files: ${ENVIRONMENT_MAPPING_FILE_PATH}
   tool_config_file: ${TOOLS_CONF_FILE_PATH}
   #Job stuff
-  job_resource_params_file: ${JOB_RESOURCE_PARAMS_CONF_FILE_PATH}
   workflow_resource_params_file: ${WORKFLOW_RESOURCE_PARAMS_CONF_FILE_PATH}
   admin_users: ${EMAIL}
   job_config_file: ${JOB_CONFIG_FILE_PATH}
@@ -195,6 +178,7 @@ if [ ! -d "${DATAROOT}" ]; then
   cp -r ${GALAXY_PATH}/tool-data/* ${DATAROOT}/tool-data/
   ln -s /bigdata ${DATAROOT}/import-dir/bigdata-galaxy
   ln -s /rhome ${DATAROOT}/import-dir/rhome-galaxy
+  ln -s ${GALAXY_PATH}/custom-scripts/custom_tool_form_utils.py ${DATAROOT}/tools/modules/custom_tool_form_utils.py
   chmod 770 ${DATAROOT}
 fi
 
@@ -341,7 +325,7 @@ cat > "${TOOLS_CONF_FILE_PATH}" << EOL
     <tool file="phenotype_association/master2pg.xml" />
   </section>
   <section id="modules" name="Environment modules">
-    <!--DONTREMOVE--> 
+    <!--DONTREMOVE-->
   </section>
 </toolbox>
 EOL
@@ -378,7 +362,7 @@ cat > "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" << EOL
   <requirements>
     <requirement type="package" version="${version}">${module_name}</requirement>
   </requirements>
-  <code file="${GALAXY_PATH}/custom-scripts/custom_tool_form_utils.py" />
+  <code file="custom_tool_form_utils.py" />
   <description>
     Environment module ${module_name}/${version}
   </description>
