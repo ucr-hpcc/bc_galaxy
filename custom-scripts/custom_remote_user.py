@@ -19,6 +19,13 @@ TODO:
         * Auth for admin users (might be multiple admin users)
         * Auth for regular users (use UserManager class but in future might wanna use sqlite tools to access database directly)
 
+
+
+2025/05/29
+    * Current error in galaxy's lib/galaxy/web/framework/middleware/error.py
+        * The function make_catching_iter returns object as list or tuple, however new library starlette which galaxy uses
+        requires this list/tuple to be returned as an encoded string of bytes
+
 """
 
 errorpage = """
