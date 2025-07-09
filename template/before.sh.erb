@@ -65,7 +65,7 @@ cat > "${JOB_CONFIG_FILE_PATH}" << EOL
         </destination>
         <destination id="slurm" runner="slurm">
             <env id="HPCC_MODULES">${HPCC_MODULES}</env>
-            <param id="tmp_dir">${SCRATCH}</param>
+            <env exec="module load workspace/scratch"></env>
         </destination>
         <destination id="local" runner="local">
             <env id="HPCC_MODULES">${HPCC_MODULES}</env>
