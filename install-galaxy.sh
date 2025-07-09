@@ -1,7 +1,7 @@
 cd "$(dirname "$0")"
 
 # Set current version
-VERSION="24.2.4"
+VERSION="25.0.0"
 
 # Check if custom scripts directory exists
 if [[ ! -d "custom-scripts/$VERSION" ]]; then
@@ -10,10 +10,12 @@ fi
 
 
 # Install Galaxy
-if [[ ! -e v$VERSION.tar.gz ]]; then
-    echo "Downloading custom galaxy scripts from UCR HPCC repo..."
-    wget "https://github.com/galaxyproject/galaxy/archive/refs/tags/v$VERSION.tar.gz"
+if [[ ! -e v$VERSION ]]; then
+    echo "Cloning Galaxy version v${VERSION}..."
+    git clone -b v${VERSION} https://github.com/galaxyproject/galaxy.git
 
+
+    echo "Downloading custom galaxy scripts from UCR HPCC repo..."
 # Get custom scripts from UCR HPCC github
     wget -O "custom-scripts/$VERSION/custom_remote_user.py" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/custom_remote_user.py"
     wget -O "custom-scripts/$VERSION/custom_destinations.py" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/custom_destinations.py"
@@ -21,31 +23,21 @@ if [[ ! -e v$VERSION.tar.gz ]]; then
 fi
 
 
-# Unzip, remove tar, and rename galaxy to version number
-tar xvf "v$VERSION.tar.gz"
-
-rm "v$VERSION.tar.gz"
-
-mv galaxy-$VERSION $VERSION
+# Rename galaxy directory to version number
+mv galaxy $VERSION
 
 cd $VERSION
-
-# Check parcel version and downgrade to allow for building with older GCLIB
-# NOTE: Issue seems resolved in upstream repo, leaving this here for now just in case issue appears again later.
-# for vis_tool in $(ls  -d config/plugins/visualizations/*/); do
-#	if [[ -f "$vis_tool/package.json" ]]; then
-#		sed -i -E 's#"parcel:*.*("|"\^)([0-9]|[0-9][0-9])\.([0-9]|[0-9][0-9])\.([0-9]|[0-9][0-9])"#"parcel": "^2.8.3"#g' $vis_tool/package.json
-#	fi
-#done
 
 # Create virtualenv
 module purge
 
-# Load older miniconda version as default one causes issues with SQLlite
-module load miniconda3/py39_4.10.3
+
+# Load in miniconda and create virtual environment
+module load miniconda3
 
 python -m venv .venv
 
+echo "Building Galaxy..."
 # Install dependencies without creating virtual env, as this was created in the step before
 # Retrieved from line 1-54 in https://github.com/galaxyproject/galaxy/blob/release_19.09/run.sh
 . ./scripts/common_startup_functions.sh --no-create-venv
@@ -93,6 +85,9 @@ set_galaxy_config_file_var
 
 # Install slurm drmaa python package into galaxy virtual environment
 $PWD/.venv/bin/python -m pip install drmaa
+
+# Remove .git directory
+rm -rf .git
 
 cd ..
 
