@@ -32,7 +32,7 @@ def partitions_available() -> List[Tuple[str, str, bool]]:
         # Split output by newlines
         get_partition = str(get_partition.stdout).split('\n')
 
-        # First value with have unnecessary information
+        # First value will have unnecessary information
         get_partition.pop(0)
 
         # The last value is just an empty line so pop it
