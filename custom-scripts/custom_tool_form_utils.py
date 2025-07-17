@@ -42,8 +42,8 @@ def partitions_available() -> List[Tuple[str, str, bool]]:
         # Store partitions in a triple format ('label', 'value', selected or not: True or False)
         for i in range(len(get_partition)):
             name = get_partition[i].strip()
-            # Set hpcc_default as the default partition
-            if name == "hpcc_default":
+            # Set epyc as the default partition
+            if name == "epyc":
                 partitions.append((name, name, True))
             else:
                 partitions.append((name, name, False))
