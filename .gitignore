@@ -1,1 +1,3 @@
 galaxy/
+custom-scripts/slurm/__pycache__
+custom-scripts/slurm/.cache
