@@ -1,7 +1,7 @@
 ---
 cluster: "hpcc"
 attributes:
-  modules: "slurm/ slurm-drmaa/ workspace/"
+  modules: "slurm/ slurm-drmaa/ workspace/ miniconda3/"
   bc_account: null
   bc_num_slots: 1
   num_cores:
