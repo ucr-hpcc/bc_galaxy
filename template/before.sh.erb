@@ -1,3 +1,5 @@
+# TODO: Use environment miniconda instead of installing it externally
+
 # Export the module function if it exists
 [[ $(type -t module) == "function" ]] && export -f module
 
@@ -32,7 +34,8 @@ export GALAXY_ROOT_DIR=${GALAXY_PATH}
 export GALAXY_CONFIG_FILE="${PWD}/galaxy.yml"
 export EMAIL="${USER}@ondemand.hpcc.ucr.edu"
 export JOB_CONFIG_FILE_PATH="${PWD}/job_conf.xml"
-export WORKFLOW_RESOURCE_PARAMS_CONF_FILE_PATH="${PWD}/workflow_resource_params_conf.xml"
+export USER_PREF_EXTRA_CONF_PATH="${PWD}/user_preferences_extra_conf.yml"
+export JOB_RESOURCE_PARAMS_CONF_FILE_PATH="${PWD}/job_resource_params_conf.xml"
 export TOOLS_CONF_FILE_PATH="${DATAROOT}/config/tool_conf.xml"
 export ENVIRONMENT_MAPPING_FILE_PATH="${DATAROOT}/config/environment_modules_mapping.yml"
 export ENVIRONMENT_MODULES_FILE_PATH="${DATAROOT}/tools/modules"
@@ -77,27 +80,6 @@ cat > "${JOB_CONFIG_FILE_PATH}" << EOL
 EOL
 )
 
-
-# Generate Galaxy workflow resource parameter configuration file
-(
-umask 077
-cat > "${WORKFLOW_RESOURCE_PARAMS_CONF_FILE_PATH}" << EOL
-<parameters>
-    <param label="Processors" name="processors" type="integer" min="1" max="28" value="" help="Number of processing cores, 'ppn' value (1-28). Leave blank to use default value." />
-    <param label="Memory" name="memory" type="integer" min="1" max="256" value="" help="Memory size in gigabytes, 'pmem' value (1-256). Leave blank to use default value." />
-    <param label="Time" name="time" type="integer" min="1" max="744" value="" help="Maximum job time in hours, 'walltime' value (1-744). Leave blank to use default value." />
-    <param label="Project" name="project" type="text" value="" help="Project to assign resource allocation to. Leave blank to use default value." />
-    <param label="Workflow Job Priority" name="priority" type="select" value="med" help="What priority should the jobs in this workflow run at? (Overrides any declared job priority)">
-        <option value="low" label="Low"/>
-        <option value="med" label="Medium"/>
-        <option value="high" label="High"/>
-        <option value="ultra" label="Ultra"/>
-        <option value="plus_ultra" label="Plus Ultra"/>
-    </param>
-</parameters>
-EOL
-)
-
 # Generate Galaxy configuration file
 (
 umask 077
@@ -109,10 +91,10 @@ gravity:
     bind: 0.0.0.0:${port}
 
 galaxy:
+  debug: true
   data_dir: ${DATAROOT}
   registration_warning_message: "The publicname and email MUST correspond to a user's netID and email on the cluster. 
   Passwords are not used for authentication but still MUST be filled out. It is advised to randomly generate passwords for users." 
-  #Remote user options
   use_remote_user: true
   remote_user_header: HTTP_X_FORWARDED_USER
   allow_user_creation: false
@@ -120,29 +102,24 @@ galaxy:
   allow_user_impersonation: true
   real_system_username: user
   show_user_prepopulate_form: true
-  #Tool shed and data config options
   tool_dependency_dir: ${DATAROOT}/database/dependencies
   tool_data_path: ${DATAROOT}/tool-data
-  #Import options
   library_import_dir: ${DATAROOT}/import-dir/
   user_library_import_dir: ${DATAROOT}/import-dir/users/
   user_library_import_dir_auto_creation: true
   user_library_import_symlink_allowlist: /bigdata,/rhome
   allow_path_paste: true
-  #Data manager config options
   enable_data_manager_user_view: true
   galaxy_data_manager_data_path: ${DATAROOT}/tool-data
-  #Config directory options
   config_dir: ${DATAROOT}/config
   modules_mapping_files: ${ENVIRONMENT_MAPPING_FILE_PATH}
   tool_config_file: ${TOOLS_CONF_FILE_PATH}
-  #Job stuff
-  workflow_resource_params_file: ${WORKFLOW_RESOURCE_PARAMS_CONF_FILE_PATH}
   admin_users: ${EMAIL}
   job_config_file: ${JOB_CONFIG_FILE_PATH}
+  webhooks_dir: ${GALAXY_PATH}/config/plugins/webhooks
+  enable_tool_tags: true
   galaxy_url_prefix: /node/${HOSTNAME}/${port}
-  #Auto migrate database to newest version
-  database_auto_migrate: true
+  conda_auto_init: false
   dependency_resolvers:
     - type: modules
       versionless: true
@@ -361,6 +338,7 @@ cat > "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" << EOL
 <tool id="${module_name}" name="${module_name}" version="${module_name}/${version}">
   <requirements>
     <requirement type="package" version="${version}">${module_name}</requirement>
+    <resource type="cores">2</resource>
   </requirements>
   <code file="custom_tool_form_utils.py" />
   <description>
