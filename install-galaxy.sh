@@ -1,11 +1,13 @@
 cd "$(dirname "$0")"
 
 # Set current version
-VERSION="25.0.0"
+VERSION="25.0.2"
 
 # Check if custom scripts directory exists
 if [[ ! -d "custom-scripts/$VERSION" ]]; then
 	mkdir -p "custom-scripts/$VERSION"
+	mkdir -p "custom-scripts/$VERSION/slurm/"
+
 fi
 
 
@@ -20,6 +22,11 @@ if [[ ! -e v$VERSION ]]; then
     wget -O "custom-scripts/$VERSION/custom_remote_user.py" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/custom_remote_user.py"
     wget -O "custom-scripts/$VERSION/custom_destinations.py" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/custom_destinations.py"
     wget -O "custom-scripts/$VERSION/custom_tool_form_utils.py" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/custom_tool_form_utils.py"
+
+    wget -O "custom-scripts/$VERSION/slurm/__init__.py" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/slurm/__init__.py"
+    wget -O "custom-scripts/$VERSION/slurm/config.yml" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/slurm/config.yml"
+    wget -O "custom-scripts/$VERSION/slurm/script.js" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/slurm/script.js"
+    wget -O "custom-scripts/$VERSION/slurm/styles.css" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/slurm/styles.css"
 fi
 
 
@@ -33,7 +40,7 @@ module purge
 
 
 # Load in miniconda and create virtual environment
-module load miniconda3
+module load miniconda3 slurm
 
 python -m venv .venv
 
@@ -96,6 +103,10 @@ echo "Configuring custom scripts..."
 ln -s $PWD/custom-scripts/$VERSION/custom_destinations.py $PWD/$VERSION/lib/galaxy/jobs/rules/destinations.py
 mkdir -p $PWD/$VERSION/custom-scripts
 ln -s $PWD/custom-scripts/$VERSION/custom_tool_form_utils.py $PWD/$VERSION/custom-scripts/custom_tool_form_utils.py
+ln -s $PWD/custom-scripts/$VERSION/slurm $PWD/$VERSION/config/plugins/webhooks
+# Disable able unused webhooks
+sed -i 's/true/false/g' $PWD/$VERSION/config/plugins/webhooks/gtn/config.yml
+
 
 # Remove galaxy remote user and replace with custom remote user
 rm $VERSION/lib/galaxy/web/framework/middleware/remoteuser.py
