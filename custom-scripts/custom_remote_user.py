@@ -85,7 +85,6 @@ class RemoteUser:
     def __call__(self, environ, start_response):
         # Allow display servers
 
-        log.debug(self.display_servers)
         if self.display_servers and "REMOTE_ADDR" in environ:
             try:
                 host = socket.gethostbyaddr(environ["REMOTE_ADDR"])[0]
