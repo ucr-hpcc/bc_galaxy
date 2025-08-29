@@ -28,6 +28,7 @@ module purge -f
 module load galaxy
 module load <%= context.modules %>
 
+
 # Define Galaxy Variables
 export GALAXY_PATH="$(dirname $(which run.sh))"
 export GALAXY_ROOT_DIR=${GALAXY_PATH}
@@ -38,6 +39,12 @@ export TOOLS_CONF_FILE_PATH="${DATAROOT}/config/tool_conf.xml"
 export ENVIRONMENT_MAPPING_FILE_PATH="${DATAROOT}/config/environment_modules_mapping.yml"
 export ENVIRONMENT_MODULES_FILE_PATH="${DATAROOT}/tools/modules"
 export RUNNER="<%= context.job_runner %>"
+export WEBHOOKS_DIR=${GALAXY_PATH}/config/plugins/webhooks
+
+
+if [[ $RUNNER == "local" ]]; then
+  WEBHOOKS_DIR=""
+fi
 
 echo "GALAXY config file location: '${GALAXY_CONFIG_FILE}'"
 echo "Data location: '${DATAROOT}'"
@@ -110,7 +117,7 @@ galaxy:
   enable_data_manager_user_view: true
   galaxy_data_manager_data_path: ${DATAROOT}/tool-data
   config_dir: ${DATAROOT}/config
-  webhooks_dir: ${GALAXY_PATH}/config/plugins/webhooks
+  webhooks_dir: ${WEBHOOKS_DIR}
   conda_auto_init: false
   modules_mapping_files: ${ENVIRONMENT_MAPPING_FILE_PATH}
   tool_config_file: ${TOOLS_CONF_FILE_PATH}
