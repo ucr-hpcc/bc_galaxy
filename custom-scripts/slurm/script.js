@@ -78,46 +78,25 @@
 		const coreItem = document.createElement("li");
 		const coreLabel = document.createElement("label");
 		coreLabel.textContent = "Amount of cores";
-		const coreValueLabel = document.createElement("div");
-		coreValueLabel.textContent = "2";
-
-		const coreCount = document.createElement("input");
-		coreCount.type = "range";
-		coreCount.min = "2";
-		coreCount.max = "999";
-		coreCount.value = "2";
-		coreCount.step = "1";
-		coreCount.addEventListener("input", () => {
-			coreValueLabel.textContent = coreCount.value;
-		});
+		const coreValue = document.createElement("input");
+		coreValue.type = "text";
+		coreValue.placeholder = "2";
 
 		coreItem.appendChild(coreLabel);
-		coreItem.appendChild(coreCount);
-		coreItem.appendChild(coreValueLabel);
+		coreItem.appendChild(coreValue);
 
 
 
 		const memItem = document.createElement("li");
 		const memLabel = document.createElement("label");
-		memLabel.textContent = "Memory in GBs";
-		const memValueLabel = document.createElement("div");
-		memValueLabel.textContent = "1";
-
-		const memCount = document.createElement("input");
-		memCount.type = "range";
-		memCount.min = "1";
-		memCount.max = "1000";
-		memCount.value = "2";
-		memCount.step = "1";
-		memCount.addEventListener("input", () => {
-			memValueLabel.textContent = memCount.value;
-		});
-
+		memLabel.textContent = "Memory in MBs";
+		const memValue = document.createElement("input");
+		memValue.type = "text";
+		memValue.placeholder = "2096";
 
 
 		memItem.appendChild(memLabel);
-		memItem.appendChild(memCount);
-		memItem.appendChild(memValueLabel);
+		memItem.appendChild(memValue);
 
 
 		const timeItem = document.createElement("li");
@@ -166,8 +145,8 @@
 
 		submitButton.addEventListener("click", () => {
 			const queryString = [
-				"cores=" + encodeURIComponent(coreCount.value),
-				"memory=" + encodeURIComponent(memCount.value),
+				"cores=" + encodeURIComponent(coreValue.value),
+				"memory=" + encodeURIComponent(memValue.value),
 				"runtime=" + encodeURIComponent(timeValue.value),
 				"partition=" + encodeURIComponent(partitionsAvil.value),
 				"args=" + encodeURIComponent(slurmValue.value)
