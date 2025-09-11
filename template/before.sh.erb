@@ -118,7 +118,7 @@ galaxy:
   galaxy_data_manager_data_path: ${DATAROOT}/tool-data
   config_dir: ${DATAROOT}/config
   webhooks_dir: ${WEBHOOKS_DIR}
-  conda_auto_init: false
+  conda_auto_init: true
   modules_mapping_files: ${ENVIRONMENT_MAPPING_FILE_PATH}
   tool_config_file: ${TOOLS_CONF_FILE_PATH}
   admin_users: ${EMAIL}
@@ -352,20 +352,6 @@ cat > "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" << EOL
     <exit_code range="1:" leveling="log" description="See log file for extra info" /> 
   </stdio>
   <inputs>
-     <conditional name="selected_runner">
-      <param label="Slurm compatible" name="runner" type="select" dynamic_options="determine_runner()" multiple="false">
-        <option value="local" selected="true">No</option>
-        <option value="slurm">Yes</option>
-      </param>
-      <when value="slurm">
-        <param name="core" type="integer" value="2" min="2" optional="false" label="Number of cores"/>
-        <param name="memory" type="integer" value="1024" min="1024" optional="false" label="Memory in MB" />
-        <param name="runtime" type="text" label="Job runtime" help="In the format of DD-HH:MM:SS. Eg. 2 days, 13 hours, 37 minutes, 42 seconds would be '2-13:37:42'." />
-        <param name="partition" type="select" label="Partition" refresh_on_change="true" optional="false" dynamic_options="partitions_available()" multiple="false" />
-      </when>
-      <when value="local">
-      </when>
-     </conditional>
      <conditional name="upload_type">
         <param name="data_type" type="select" label="What upload type would you like to use?">
             <option value="dataset" selected="true">Upload file/files as a dataset?</option>
