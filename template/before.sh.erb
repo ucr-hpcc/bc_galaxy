@@ -98,20 +98,12 @@ gravity:
 
 galaxy:
   data_dir: ${DATAROOT}
-  registration_warning_message: "The publicname and email MUST correspond to a user's netID and email on the cluster. 
-  Passwords are not used for authentication but still MUST be filled out. It is advised to randomly generate passwords for users." 
   use_remote_user: true
   remote_user_header: HTTP_X_FORWARDED_USER
-  allow_user_creation: false
-  allow_user_deletion: true
-  allow_user_impersonation: true
   real_system_username: user
-  show_user_prepopulate_form: true
   tool_dependency_dir: ${DATAROOT}/database/dependencies
   tool_data_path: ${DATAROOT}/tool-data
   library_import_dir: ${DATAROOT}/import-dir/
-  user_library_import_dir: ${DATAROOT}/import-dir/users/
-  user_library_import_dir_auto_creation: true
   user_library_import_symlink_allowlist: /bigdata,/rhome
   allow_path_paste: true
   enable_data_manager_user_view: true
@@ -155,21 +147,13 @@ if [ ! -d "${DATAROOT}" ]; then
     ${DATAROOT}/tool-data \
     ${DATAROOT}/config \
     ${DATAROOT}/import-dir \
-    ${DATAROOT}/tools/modules \
-    ${DATAROOT}/import-dir/users
+    ${DATAROOT}/tools/modules
   cp -r ${GALAXY_PATH}/tool-data/* ${DATAROOT}/tool-data/
   ln -s /bigdata ${DATAROOT}/import-dir/bigdata-galaxy
   ln -s /rhome ${DATAROOT}/import-dir/rhome-galaxy
   ln -s ${GALAXY_PATH}/custom-scripts/custom_tool_form_utils.py ${DATAROOT}/tools/modules/custom_tool_form_utils.py
   chmod 770 ${DATAROOT}
 fi
-
-for user in $(ls "${DATAROOT}/import-dir/users/"); do
-  if [ ! -L "${DATAROOT}/import-dir/users/${user}/bigdata-galaxy" ] && [ ! -L "${DATAROOT}/import-dir/users/${user}/rhome-galaxy" ]; then
-    ln -s /bigdata "${DATAROOT}/import-dir/users/${user}/bigdata-galaxy"
-    ln -s /rhome "${DATAROOT}/import-dir/users/${user}/rhome-galaxy"
-  fi
-done
 
 # Generate tool conf file
 if [ ! -f ${TOOLS_CONF_FILE_PATH} ]; then
