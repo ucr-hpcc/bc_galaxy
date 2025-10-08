@@ -33,7 +33,7 @@ def dynamic_cores_time(app,
                 slurm_runner.params['nativeSpecification'] = f"--cpus-per-task={cores} --mem={mem} --partition={partition_selected} --time={runtime} --job_name={user.username}/{tool.id} {args}"
             else:
                 slurm_runner.params['nativeSpecification'] = f"--cpus-per-task={cores} --mem={mem} --partition={partition_selected} --job_name={user.username}/{tool.id} {args}"
-
+            log.info('Returning slurm runner...')
             return slurm_runner
 
         log.info('Returning local runner...')
