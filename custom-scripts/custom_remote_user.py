@@ -101,11 +101,10 @@ class RemoteUser:
             if self.maildomain and "@" not in environ[self.remote_user_header]:
                 environ[self.remote_user_header] = f"{environ[self.remote_user_header]}@{self.maildomain}"
 
-            # Verify user 
-            environ[self.remote_user_header] = self.verify_user(environ[self.remote_user_header])
-
-            #Display custom message if remote user is not in the database
-            if environ[self.remote_user_header] == None:
+            # Verify user
+            if self.verify_user(environ[self.remote_user_header]) != None:
+                environ[self.remote_user_header] = self.verify_user(environ[self.remote_user_header])
+            else:
                 log.debug(f"Unable to identify user.  {environ[self.remote_user_header]} not found")
                 for k, v in environ.items():
                     log.debug("%s = %s", k, v)
@@ -240,12 +239,11 @@ class RemoteUser:
     # Return user email if user exists in sql database
     def verify_user(self, user_name):
         galaxy_user_manager = get_app().user_manager
-        regular_galaxy_user = galaxy_user_manager.get_user_by_identity(user_name)
-        if regular_galaxy_user == None:
-            return None
-        log.info(regular_galaxy_user.email)
-        return regular_galaxy_user.email
+        log.info(self.admin_users[0].split('@')[0])
+        if self.admin_users[0].split('@')[0] != user_name:
+            return None;
+        return self.admin_users[0]
 
     def error(self, start_response, title="Access denied", message="Please contact your local Galaxy administrator."):
         start_response("403 Forbidden", [("Content-type", "text/html")])
-        return [errorpage % (title, message)]
+        return [(errorpage % (title, message)).encode('utf-8')]
