@@ -1,12 +1,13 @@
 cd "$(dirname "$0")"
 
 # Set current version
-VERSION="25.0.2"
+VERSION="25.0.3"
 
 # Check if custom scripts directory exists
 if [[ ! -d "custom-scripts/$VERSION" ]]; then
 	mkdir -p "custom-scripts/$VERSION"
-	mkdir -p "custom-scripts/$VERSION/slurm/"
+	mkdir "custom-scripts/$VERSION/slurm/"
+	mkdir -p "custom-scripts/$VERSION/static/images"
 
 fi
 
@@ -27,6 +28,9 @@ if [[ ! -e v$VERSION ]]; then
     wget -O "custom-scripts/$VERSION/slurm/config.yml" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/slurm/config.yml"
     wget -O "custom-scripts/$VERSION/slurm/script.js" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/slurm/script.js"
     wget -O "custom-scripts/$VERSION/slurm/styles.css" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/slurm/styles.css"
+    wget -O "custom-scripts/$VERSION/static/images/UC_Riverside_logo.svg" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/static/images/UC_Riverside_logo.svg"
+    wget -O "custom-scripts/$VERSION/static/welcome.html" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/static/welcome.html"
+
 fi
 
 
@@ -101,8 +105,7 @@ cd ..
 # Add custom scripts to configure Galaxy for ondemand use
 echo "Configuring custom scripts..."
 ln -s $PWD/custom-scripts/$VERSION/custom_destinations.py $PWD/$VERSION/lib/galaxy/jobs/rules/destinations.py
-mkdir -p $PWD/$VERSION/custom-scripts
-ln -s $PWD/custom-scripts/$VERSION/custom_tool_form_utils.py $PWD/$VERSION/custom-scripts/custom_tool_form_utils.py
+
 ln -s $PWD/custom-scripts/$VERSION/slurm $PWD/$VERSION/config/plugins/webhooks
 # Disable able unused webhooks
 sed -i 's/true/false/g' $PWD/$VERSION/config/plugins/webhooks/gtn/config.yml
@@ -111,5 +114,7 @@ sed -i 's/true/false/g' $PWD/$VERSION/config/plugins/webhooks/gtn/config.yml
 # Remove galaxy remote user and replace with custom remote user
 rm $VERSION/lib/galaxy/web/framework/middleware/remoteuser.py
 ln -s $PWD/custom-scripts/$VERSION/custom_remote_user.py $PWD/$VERSION/lib/galaxy/web/framework/middleware/remoteuser.py
+
+cp -r $PWD/custom-scripts/$VERSION/static $VERSION
 
 echo "Setup finished..."
