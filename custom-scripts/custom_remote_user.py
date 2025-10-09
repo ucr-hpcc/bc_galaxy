@@ -11,22 +11,6 @@ log = logging.getLogger(__name__)
 
 #Used to get running Galaxy instance and user objects
 from galaxy.webapps.galaxy.api import get_app
-from galaxy.managers.users import UserManager
-
-"""
-TODO: 
-    Finish Galaxy Auth
-        * Auth for admin users (might be multiple admin users)
-        * Auth for regular users (use UserManager class but in future might wanna use sqlite tools to access database directly)
-
-
-
-2025/05/29
-    * Current error in galaxy's lib/galaxy/web/framework/middleware/error.py
-        * The function make_catching_iter returns object as list or tuple, however new library starlette which galaxy uses
-        requires this list/tuple to be returned as an encoded string of bytes
-
-"""
 
 errorpage = """
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
@@ -98,7 +82,6 @@ class RemoteUser:
         if self.single_user:
             assert self.remote_user_header not in environ
             environ[self.remote_user_header] = self.single_user
-    
 
         if environ.get(self.remote_user_header, "").startswith("(null)"):
             # Throw away garbage headers.
@@ -118,9 +101,9 @@ class RemoteUser:
             if self.maildomain and "@" not in environ[self.remote_user_header]:
                 environ[self.remote_user_header] = f"{environ[self.remote_user_header]}@{self.maildomain}"
 
-           #Verify remote user 
-            environ[self.remote_user_header] = self.verify_user(environ[self.remote_user_header], environ)
-            
+            # Verify user 
+            environ[self.remote_user_header] = self.verify_user(environ[self.remote_user_header])
+
             #Display custom message if remote user is not in the database
             if environ[self.remote_user_header] == None:
                 log.debug(f"Unable to identify user.  {environ[self.remote_user_header]} not found")
@@ -254,37 +237,14 @@ class RemoteUser:
             """
             return self.error(start_response, title, message)
 
-    def verify_user(self, user_name, environ):
-        #Should probably change to use sqlite tools to access user info from database
+    # Return user email if user exists in sql database
+    def verify_user(self, user_name):
         galaxy_user_manager = get_app().user_manager
-
-        if self.admin_users is not None:
-
-            #https://stackoverflow.com/questions/16380326/check-if-substring-is-in-a-list-of-strings
-            admin_list = '\t'.join(self.admin_users)
-            
-            if user_name in admin_list: 
-            
-            #Galaxy user is an admin user
-            #1.) Find admin user corresponding to user
-            #2.) Check if admin user exists within database
-                # * Create user (by appending email address from admin_user)
-                # * Or might need to set default maildomain
-
-                #This should loop through the admin list and find the admin user corresponding to the 
-                #user passed in through header
-                
-                for i in range(len(self.admin_users)):
-                    if user_name == self.admin_users[i].split('@')[0]:
-                        admin_user = galaxy_user_manager.get_user_by_identity(self.admin_users[i].split('@')[0])
-                        return self.admin_users[i]         
-        
         regular_galaxy_user = galaxy_user_manager.get_user_by_identity(user_name)
-        if regular_galaxy_user != None and regular_galaxy_user.deleted == False:
-            regular_galaxy_user = f"{regular_galaxy_user.email}"
-            return regular_galaxy_user
-
-        return None
+        if regular_galaxy_user == None:
+            return None
+        log.info(regular_galaxy_user.email)
+        return regular_galaxy_user.email
 
     def error(self, start_response, title="Access denied", message="Please contact your local Galaxy administrator."):
         start_response("403 Forbidden", [("Content-type", "text/html")])
