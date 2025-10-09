@@ -1,5 +1,3 @@
-# TODO: Use environment miniconda instead of installing it externally
-
 # Export the module function if it exists
 [[ $(type -t module) == "function" ]] && export -f module
 
@@ -28,39 +26,30 @@ module purge -f
 module load galaxy
 module load <%= context.modules %>
 
-
 # Define Galaxy Variables
-export GALAXY_PATH="$(dirname $(which run.sh))"
-export GALAXY_ROOT_DIR=${GALAXY_PATH}
 export GALAXY_CONFIG_FILE="${PWD}/galaxy.yml"
-export EMAIL="${USER}@ondemand.hpcc.ucr.edu"
-export JOB_CONFIG_FILE_PATH="${PWD}/job_conf.xml"
-export TOOLS_CONF_FILE_PATH="${DATAROOT}/config/tool_conf.xml"
-export ENVIRONMENT_MAPPING_FILE_PATH="${DATAROOT}/config/environment_modules_mapping.yml"
-export ENVIRONMENT_MODULES_FILE_PATH="${DATAROOT}/tools/modules"
 export RUNNER="<%= context.job_runner %>"
-export WEBHOOKS_DIR=${GALAXY_PATH}/config/plugins/webhooks
+
+
+ENVIRONMENT_MAPPING_FILE_PATH="${DATAROOT}/config/environment_modules_mapping.yml"
+ENVIRONMENT_MODULES_FILE_PATH="${DATAROOT}/tools/modules"
+ENVIRONMENT_MODULES_CONFIG_FILE_PATH="${DATAROOT}/config/env_modules_tools.xml"
+WEBHOOKS_DIR=${GALAXY_ROOT_DIR}/config/plugins/webhooks
 
 
 if [[ $RUNNER == "local" ]]; then
   WEBHOOKS_DIR=""
 fi
 
-echo "GALAXY config file location: '${GALAXY_CONFIG_FILE}'"
-echo "Data location: '${DATAROOT}'"
-echo "Galaxy path:    '${GALAXY_PATH}'"
-
 # Generate Galaxy job configuration file
 (
 umask 077
-cat > "${JOB_CONFIG_FILE_PATH}" << EOL
+cat > "${PWD}/job_conf.xml" << EOL
 <?xml version="1.0"?>
 <job_conf>
     <plugins>
         <plugin id="local" type="runner" load="galaxy.jobs.runners.local:LocalJobRunner"/>
-        <plugin id="slurm" type="runner" load="galaxy.jobs.runners.slurm:SlurmJobRunner">
-          <param id="drmaa_library_path">${DRMAA_LIBRARY_PATH}</param>
-        </plugin>
+        <plugin id="slurm" type="runner" load="galaxy.jobs.runners.slurm:SlurmJobRunner"/>
         <plugin id="dynamic" type="runner" >
           <param id="runner"><%= context.job_runner %></param>
           <param id="rules_module">galaxy.jobs.rules</param>
@@ -102,19 +91,19 @@ galaxy:
   remote_user_header: HTTP_X_FORWARDED_USER
   real_system_username: user
   tool_dependency_dir: ${DATAROOT}/database/dependencies
-  tool_data_path: ${DATAROOT}/tool-data
   library_import_dir: ${DATAROOT}/import-dir/
   user_library_import_symlink_allowlist: /bigdata,/rhome
   allow_path_paste: true
-  enable_data_manager_user_view: true
-  galaxy_data_manager_data_path: ${DATAROOT}/tool-data
-  config_dir: ${DATAROOT}/config
   webhooks_dir: ${WEBHOOKS_DIR}
   conda_auto_init: true
+  config_dir: ${GALAXY_ROOT_DIR}/config
+  managed_config_dir: ${DATAROOT}/config
+  tool_config_file: ${GALAXY_ROOT_DIR}/lib/galaxy/config/sample/tool_conf.xml.sample,${ENVIRONMENT_MODULES_CONFIG_FILE_PATH}
   modules_mapping_files: ${ENVIRONMENT_MAPPING_FILE_PATH}
-  tool_config_file: ${TOOLS_CONF_FILE_PATH}
-  admin_users: ${EMAIL}
-  job_config_file: ${JOB_CONFIG_FILE_PATH}
+  shed_tool_data_path: ${DATAROOT}/shed_tool_data
+  galaxy_data_manager_data_path: ${DATAROOT}/data_man
+  admin_users: ${USER}@ondemand.ucr
+  job_config_file: ${PWD}/job_conf.xml
   galaxy_url_prefix: /node/${HOSTNAME}/${port}
   database_auto_migrate: true
   dependency_resolvers:
@@ -144,152 +133,24 @@ EOL
 if [ ! -d "${DATAROOT}" ]; then
   echo "Creating galaxy directory..."
   mkdir -p ${DATAROOT}/database/dependencies \
-    ${DATAROOT}/tool-data \
     ${DATAROOT}/config \
     ${DATAROOT}/import-dir \
+    ${DATAROOT}/shed_tool_data \
+    ${DATAROOT}/data_man \
     ${DATAROOT}/tools/modules
-  cp -r ${GALAXY_PATH}/tool-data/* ${DATAROOT}/tool-data/
   ln -s /bigdata ${DATAROOT}/import-dir/bigdata-galaxy
   ln -s /rhome ${DATAROOT}/import-dir/rhome-galaxy
-  ln -s ${GALAXY_PATH}/custom-scripts/custom_tool_form_utils.py ${DATAROOT}/tools/modules/custom_tool_form_utils.py
   chmod 770 ${DATAROOT}
 fi
 
 # Generate tool conf file
-if [ ! -f ${TOOLS_CONF_FILE_PATH} ]; then
+# Create link to Galaxy main tools in data root dir and one for env modules
+if [ ! -f ${ENVIRONMENT_MODULES_CONFIG_FILE_PATH} ]; then
  (
 umask 077
-cat > "${TOOLS_CONF_FILE_PATH}" << EOL
+cat > "${ENVIRONMENT_MODULES_CONFIG_FILE_PATH}" << EOL
 <?xml version='1.0' encoding='utf-8'?>
 <toolbox monitor="true">
-  <section id="getext" name="Get Data">
-    <tool file="data_source/upload.xml" />
-    <tool file="data_source/ucsc_tablebrowser.xml" />
-    <!-- <tool file="data_source/ucsc_tablebrowser_test.xml" /> -->
-    <tool file="data_source/ncbi_datasets.xml" />
-    <tool file="data_source/sra.xml" />
-    <tool file="data_source/ebi_sra.xml" />
-    <tool file="data_source/fly_modencode.xml" />
-    <tool file="data_source/intermine.xml" />
-    <tool file="data_source/flymine.xml" />
-    <!-- <tool file="data_source/flymine_test.xml" /> -->
-    <tool file="data_source/modmine.xml" />
-    <tool file="data_source/mousemine.xml" />
-    <tool file="data_source/ratmine.xml" />
-    <tool file="data_source/yeastmine.xml" />
-    <tool file="data_source/worm_modencode.xml" />
-    <tool file="data_source/wormbase.xml" />
-    <!-- <tool file="data_source/wormbase_test.xml" /> -->
-    <tool file="data_source/eupathdb.xml" />
-    <tool file="data_source/hbvar.xml" />
-  </section>
-  <section id="send" name="Send Data">
-    <tool file="data_export/send.xml" />
-    <tool file="data_export/export_remote.xml" />
-  </section>
-  <section id="collection_operations" name="Collection Operations">
-    <tool file="\${model_tools_path}/unzip_collection.xml" />
-    <tool file="\${model_tools_path}/zip_collection.xml" />
-    <tool file="\${model_tools_path}/filter_failed_collection.xml" />
-    <tool file="\${model_tools_path}/filter_empty_collection.xml" />
-    <tool file="\${model_tools_path}/flatten_collection.xml" />
-    <tool file="\${model_tools_path}/merge_collection.xml" />
-    <tool file="\${model_tools_path}/relabel_from_file.xml" />
-    <tool file="\${model_tools_path}/filter_from_file.xml" />
-    <tool file="\${model_tools_path}/sort_collection_list.xml" />
-    <tool file="\${model_tools_path}/harmonize_two_collections_list.xml" />
-    <tool file="\${model_tools_path}/cross_product_flat.xml" />
-    <tool file="\${model_tools_path}/cross_product_nested.xml" />
-    <tool file="\${model_tools_path}/tag_collection_from_file.xml" />
-    <tool file="\${model_tools_path}/apply_rules.xml" />
-    <tool file="\${model_tools_path}/build_list.xml" />
-    <tool file="\${model_tools_path}/build_list_1.2.0.xml" />
-    <tool file="\${model_tools_path}/extract_dataset.xml" />
-    <tool file="\${model_tools_path}/duplicate_file_to_collection.xml" />
-  </section>
-  <section id="expression_tools" name="Expression Tools">
-    <tool file="expression_tools/parse_values_from_file.xml"/>
-  </section>
-  <section id="liftOver" name="Lift-Over">
-    <tool file="extract/liftOver_wrapper.xml" />
-  </section>
-  <section id="textutil" name="Text Manipulation">
-    <tool file="filters/fixedValueColumn.xml" />
-    <tool file="filters/catWrapper.xml" />
-    <tool file="filters/cutWrapper.xml" />
-    <tool file="filters/mergeCols.xml" />
-    <tool file="filters/convert_characters.xml" />
-    <tool file="filters/CreateInterval.xml" />
-    <tool file="filters/cutWrapper.xml" />
-    <tool file="filters/changeCase.xml" />
-    <tool file="filters/pasteWrapper.xml" />
-    <tool file="filters/remove_beginning.xml" />
-    <tool file="filters/randomlines.xml" />
-    <tool file="filters/headWrapper.xml" />
-    <tool file="filters/tailWrapper.xml" />
-    <tool file="filters/trimmer.xml" />
-    <tool file="filters/wc_gnu.xml" />
-    <tool file="filters/secure_hash_message_digest.xml" />
-  </section>
-  <section id="convert" name="Convert Formats">
-    <tool file="filters/bed2gff.xml" />
-    <tool file="filters/gff2bed.xml" />
-    <tool file="maf/maf_to_bed.xml" />
-    <tool file="maf/maf_to_interval.xml" />
-    <tool file="maf/maf_to_fasta.xml" />
-    <tool file="filters/sff_extractor.xml" />
-    <tool file="filters/wig_to_bigwig.xml" />
-    <tool file="filters/bed_to_bigbed.xml" />
-  </section>
-  <section id="filter" name="Filter and Sort">
-    <tool file="stats/filtering_1_1_0.xml" />
-    <tool file="stats/filtering.xml" />
-    <tool file="filters/sorter.xml" />
-    <tool file="filters/grep.xml" />
-    <tool file="filters/grep_1.0.1.xml"/>
-    <label id="gff" text="GFF" />
-    <tool file="filters/gff/extract_GFF_Features.xml" />
-    <tool file="filters/gff/gff_filter_by_attribute.xml" />
-    <tool file="filters/gff/gff_filter_by_feature_count.xml" />
-    <tool file="filters/gff/gtf_filter_by_attribute_values_list.xml" />
-  </section>
-  <section id="group" name="Join, Subtract and Group">
-    <tool file="filters/joiner.xml" />
-    <tool file="filters/compare.xml" />
-    <tool file="stats/grouping.xml" />
-  </section>
-  <section id="fetchAlignSeq" name="Fetch Alignments/Sequences">
-    <tool file="maf/interval2maf_pairwise.xml" />
-    <tool file="maf/maf_split_by_species.xml" />
-    <tool file="maf/interval_maf_to_merged_fasta.xml" />
-    <tool file="maf/genebed_maf_to_fasta.xml" />
-    <tool file="maf/maf_stats.xml" />
-    <tool file="maf/maf_thread_for_species.xml" />
-    <tool file="maf/maf_limit_to_species.xml" />
-    <tool file="maf/maf_limit_size.xml" />
-    <tool file="maf/maf_by_block_number.xml" />
-    <tool file="maf/maf_reverse_complement.xml" />
-    <tool file="maf/maf_filter.xml" />
-  </section>
-  <section id="bxops" name="Operate on Genomic Intervals" version="">
-    <tool file="filters/wiggle_to_simple.xml" />
-    <tool file="stats/aggregate_binned_scores_in_intervals.xml" />
-    <tool file="filters/ucsc_gene_bed_to_exon_bed.xml" />
-  </section>
-  <section id="stats" name="Statistics">
-    <tool file="stats/gsummary.xml" />
-    <tool file="filters/uniq.xml" />
-  </section>
-  <section id="plots" name="Graph/Display Data">
-    <tool file="maf/vcf_to_maf_customtrack.xml" />
-  </section>
-  <section id="hgv" name="Phenotype Association">
-    <tool file="phenotype_association/sift.xml" />
-    <tool file="phenotype_association/linkToGProfile.xml" />
-    <tool file="phenotype_association/linkToDavid.xml" />
-    <tool file="phenotype_association/ldtools.xml" />
-    <tool file="phenotype_association/master2pg.xml" />
-  </section>
   <section id="modules" name="Environment modules">
     <!--DONTREMOVE-->
   </section>
@@ -300,7 +161,7 @@ fi
 
 # Creates mapping file between tools and modules
 if [[ ! -f "${ENVIRONMENT_MAPPING_FILE_PATH}" ]]; then
-  echo "Creating environment modules mapping file path..."  
+  echo "Creating environment modules mapping file path..."
 (
 umask 077
 cat > "${ENVIRONMENT_MAPPING_FILE_PATH}" << EOL
@@ -316,7 +177,7 @@ for module in ${MODULES}
 do
   module_name="$(echo ${module} | cut -d "/" -f1 )"
   version="$(echo ${module} | cut -d "/" -f2 )"
-  
+
   # If the module doesn't exist in the user's current tools directory then create the file for the module
   if ! [ -f "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" ]; then
     echo "Creating tool xml file for ${module_name}/${version}"
@@ -328,7 +189,6 @@ cat > "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" << EOL
   <requirements>
     <requirement type="package" version="${version}">${module_name}</requirement>
   </requirements>
-  <code file="custom_tool_form_utils.py" />
   <description>
     Environment module ${module_name}/${version}
   </description>
@@ -443,7 +303,7 @@ cat > "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" << EOL
 EOL
 )
 # Add module to tools configuration
-  sed -i 's|<!--DONTREMOVE-->|<tool file="'${ENVIRONMENT_MODULES_FILE_PATH}'/'${module_name}'_'${version}'.xml" />\n    <!--DONTREMOVE-->|g' ${TOOLS_CONF_FILE_PATH}
+  sed -i 's|<!--DONTREMOVE-->|<tool file="'${ENVIRONMENT_MODULES_FILE_PATH}'/'${module_name}'_'${version}'.xml" />\n    <!--DONTREMOVE-->|g' ${ENVIRONMENT_MODULES_CONFIG_FILE_PATH}
 # Add module to the mapping file
   sed -i 's|#DONTREMOVE|- form:\n\     name: '${module_name}'\n     version: "'${version}'"\n  to:\n     name: '${module_name}'\n     version: "'${version}'"\n#DONTREMOVE|g' ${ENVIRONMENT_MAPPING_FILE_PATH}
   fi
