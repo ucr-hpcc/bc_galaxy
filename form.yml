@@ -13,7 +13,7 @@ attributes:
   num_mem:
     widget: "number_field"
     label: "Memory in GB"
-    value: 8
+    value: 6
     min: 1
     id: 'num_mem'
   auto_queues:
