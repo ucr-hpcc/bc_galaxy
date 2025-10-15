@@ -238,8 +238,6 @@ class RemoteUser:
 
     # Return user email if user exists in sql database
     def verify_user(self, user_name):
-        galaxy_user_manager = get_app().user_manager
-        log.info(self.admin_users[0].split('@')[0])
         if self.admin_users[0].split('@')[0] != user_name:
             return None;
         return self.admin_users[0]
