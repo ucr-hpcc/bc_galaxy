@@ -83,10 +83,12 @@ gravity:
   galaxy_user : ${USER}
   gunicorn:
     enable: true
+    workers: <%= context.num_cores %>
     bind: 0.0.0.0:${port}
 
 galaxy:
   data_dir: ${DATAROOT}
+  galaxy_url_prefix: /node/${HOSTNAME}/${port}
   use_remote_user: true
   remote_user_header: HTTP_X_FORWARDED_USER
   real_system_username: user
@@ -104,7 +106,6 @@ galaxy:
   galaxy_data_manager_data_path: ${DATAROOT}/data_man
   admin_users: ${USER}@ondemand.ucr
   job_config_file: ${PWD}/job_conf.xml
-  galaxy_url_prefix: /node/${HOSTNAME}/${port}
   database_auto_migrate: true
   dependency_resolvers:
     - type: modules
