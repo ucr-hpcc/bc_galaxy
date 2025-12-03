@@ -1,7 +1,7 @@
 ---
-name: Galaxy
+name: Galaxy (BETA)
 category: Interactive Apps
 subcategory: Servers
 role: batch_connect
 description: |
-  This app will launch a Galaxy server session.
+  This app will launch a Galaxy server session. <b style='color: red;'>Galaxy is currently in beta. For usage please see INSERT-HPCC-LINK. Please report any problems you might experience to support@hpcc.ucr.edu</b>
