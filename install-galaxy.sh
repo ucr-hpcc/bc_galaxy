@@ -107,7 +107,7 @@ echo "Configuring custom scripts..."
 ln -s $PWD/custom-scripts/$VERSION/custom_destinations.py $PWD/$VERSION/lib/galaxy/jobs/rules/destinations.py
 
 ln -s $PWD/custom-scripts/$VERSION/slurm $PWD/$VERSION/config/plugins/webhooks
-# Disable able unused webhooks
+# Disable unused webhooks
 sed -i 's/true/false/g' $PWD/$VERSION/config/plugins/webhooks/gtn/config.yml
 
 
