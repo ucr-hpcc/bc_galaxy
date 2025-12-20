@@ -74,6 +74,7 @@ cat > "${PWD}/job_conf.xml" << EOL
 EOL
 )
 
+password=$(create_passwd 16)
 
 # Generate Galaxy configuration file
 (
@@ -89,8 +90,12 @@ gravity:
 galaxy:
   data_dir: ${DATAROOT}
   galaxy_url_prefix: /node/${HOSTNAME}/${port}
+  static_enabled: true
+  static_dir: ${GALAXY_ROOT_DIR}/static/
   use_remote_user: true
   remote_user_header: HTTP_X_FORWARDED_USER
+  dynamic_proxy_manage: false
+  id_secret: ${password}
   real_system_username: user
   tool_dependency_dir: ${DATAROOT}/database/dependencies
   library_import_dir: ${DATAROOT}/import-dir/
@@ -127,8 +132,6 @@ galaxy:
       versionless: true
 EOL
 )
-
-
 
 # Creates galaxy directory and sets directory permissions
 if [ ! -d "${DATAROOT}" ]; then

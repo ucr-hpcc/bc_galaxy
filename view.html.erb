@@ -1,17 +1,4 @@
-<script>
-function displayLink() {
-    var linkMessage = document.getElementById("linkMessage")
-    var link = document.getElementById("galaxyLink")
-    linkMessage.style.display = "block";
-    
-    link.select();
-    navigator.clipboard.writeText(link.value);
-  }
-</script>
-
-<input type="text" style="display: none;" value="https://ondemand.hpcc.ucr.edu/node/<%= host %>/<%= port %>/login/start?redirect=None" id="galaxyLink">
-
-<form action="/node/<%= host %>/<%= port %>/login/start?redirect=None" method="post" target="_blank">
+<form action="/node/<%= host %>/<%= port %>/login" method="post" target="_blank">
   <button class="btn btn-primary" type="submit">
     <i class="fa fa-eye"></i> Connect to Galaxy
   </button>
