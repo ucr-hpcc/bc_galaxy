@@ -74,8 +74,6 @@ cat > "${PWD}/job_conf.xml" << EOL
 EOL
 )
 
-password=$(create_passwd 16)
-
 # Generate Galaxy configuration file
 (
 umask 077
@@ -84,7 +82,6 @@ gravity:
   galaxy_user : ${USER}
   gunicorn:
     enable: true
-    workers: <%= context.num_cores %>
     bind: 0.0.0.0:${port}
 
 galaxy:
@@ -95,55 +92,56 @@ galaxy:
   use_remote_user: true
   remote_user_header: HTTP_X_FORWARDED_USER
   dynamic_proxy_manage: false
-  id_secret: ${password}
   real_system_username: user
-  tool_dependency_dir: ${DATAROOT}/database/dependencies
+  tool_dependency_dir: ${DATAROOT}/dependencies
   library_import_dir: ${DATAROOT}/import-dir/
   user_library_import_symlink_allowlist: /bigdata,/rhome
   allow_path_paste: true
   webhooks_dir: ${WEBHOOKS_DIR}
-  conda_auto_init: true
   config_dir: ${GALAXY_ROOT_DIR}/config
   managed_config_dir: ${DATAROOT}/config
-  tool_config_file: ${GALAXY_ROOT_DIR}/lib/galaxy/config/sample/tool_conf.xml.sample,${ENVIRONMENT_MODULES_CONFIG_FILE_PATH}
-  modules_mapping_files: ${ENVIRONMENT_MAPPING_FILE_PATH}
   shed_tool_data_path: ${DATAROOT}/shed_tool_data
-  galaxy_data_manager_data_path: ${DATAROOT}/data_man
+  tool_config_file: ${GALAXY_ROOT_DIR}/lib/galaxy/config/sample/tool_conf.xml.sample,${ENVIRONMENT_MODULES_CONFIG_FILE_PATH},${DATAROOT}/config/bootstrap_tools_conf.xml
+  modules_mapping_files: ${ENVIRONMENT_MAPPING_FILE_PATH}
+  install_database_connection: "sqlite:///${DATAROOT}/install_tool_sheds.sqlite"
   admin_users: ${USER}@ondemand.ucr
   job_config_file: ${PWD}/job_conf.xml
   database_auto_migrate: true
+  database_wait: true
   dependency_resolvers:
+    - type: conda
+      auto_init: false
+      auto_install: false
+      prefix: ${GALAXY_ROOT_DIR}/bootstrap/dependencies/_conda/
+      exec: ${GALAXY_ROOT_DIR}/bootstrap/dependencies/_conda/bin/conda
+      versionless: true
+      read_only: true
+    - type: conda
+      versionless: true
+      auto_init: true
+      auto_install: false
     - type: modules
       versionless: true
       modulecmd: $(which modulecmd)
       find_by: avail
       default_indicator: "(default)"
-    - type: modules
-      versionless: false
-      modulecmd: $(which modulecmd)
-      find_by: avail
-      default_indicator: "(default)"
-    - type: tool_shed_packages
-    - type: galaxy_packages
-    - type: conda
-    - type: galaxy_packages
-      versionless: true
-    - type: conda
-      versionless: true
 EOL
 )
 
 # Creates galaxy directory and sets directory permissions
 if [ ! -d "${DATAROOT}" ]; then
   echo "Creating galaxy directory..."
-  mkdir -p ${DATAROOT}/database/dependencies \
+  mkdir -p ${DATAROOT}/dependencies \
     ${DATAROOT}/config \
     ${DATAROOT}/import-dir \
     ${DATAROOT}/shed_tool_data \
-    ${DATAROOT}/data_man \
     ${DATAROOT}/tools/modules
+  cp ${GALAXY_ROOT_DIR}/bootstrap/install_tool_sheds.sqlite ${DATAROOT}/
+  cp ${GALAXY_ROOT_DIR}/bootstrap/config/* ${DATAROOT}/config/
   ln -s /bigdata ${DATAROOT}/import-dir/bigdata-galaxy
   ln -s /rhome ${DATAROOT}/import-dir/rhome-galaxy
+  source ${GALAXY_ROOT_DIR}/.venv/bin/activate
+  python $GALAXY_ROOT_DIR/scripts/db.py -c ${GALAXY_CONFIG_FILE} init
   chmod 770 ${DATAROOT}
 fi
 
