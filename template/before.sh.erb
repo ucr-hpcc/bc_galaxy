@@ -137,7 +137,11 @@ if [ ! -d "${DATAROOT}" ]; then
     ${DATAROOT}/shed_tool_data \
     ${DATAROOT}/tools/modules
   cp ${GALAXY_ROOT_DIR}/bootstrap/install_tool_sheds.sqlite ${DATAROOT}/
-  cp ${GALAXY_ROOT_DIR}/bootstrap/config/* ${DATAROOT}/config/
+  cp ${GALAXY_ROOT_DIR}/bootstrap/config/bootstrap_tools_conf.xml \
+     ${GALAXY_ROOT_DIR}/bootstrap/config/shed_tool_data_table_conf.xml \
+     ${GALAXY_ROOT_DIR}/bootstrap/config/shed_data_manager_conf.xml \
+     ${GALAXY_ROOT_DIR}/bootstrap/config/integrated_tool_panel.xml \
+     ${DATAROOT}/config/
   ln -s /bigdata ${DATAROOT}/import-dir/bigdata-galaxy
   ln -s /rhome ${DATAROOT}/import-dir/rhome-galaxy
   source ${GALAXY_ROOT_DIR}/.venv/bin/activate
