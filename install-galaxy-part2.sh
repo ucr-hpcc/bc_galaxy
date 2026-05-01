@@ -75,14 +75,13 @@ if ! galaxy-wait -g http://localhost:8080 -v --timeout 180; then
 	exit 1
 fi
 
-shed-tools install --tools-file $PWD/usegalaxy-tools/usegalaxy.org/nanopore.yml.lock --latest --verbose --galaxy 'http://localhost:8080' --api-key ${RANDOM_KEY}
-#TOOLS_TO_INSTALL=( $(ls $PWD/usegalaxy-tools/usegalaxy.org/*.yml.lock) )
-#for tool in "${TOOLS_TO_INSTALL[@]}"; do
-#	echo "Installing: ${tool}"
-#	shed-tools install --tools-file ${tool} --latest --verbose --galaxy 'http://localhost:8080' --api-key ${RANDOM_KEY}
-#done
+TOOLS_TO_INSTALL=( $(ls $PWD/usegalaxy-tools/usegalaxy.org/*.yml.lock) )
+for tool in "${TOOLS_TO_INSTALL[@]}"; do
+	echo "Installing: ${tool}"
+	shed-tools install --tools-file ${tool} --latest --verbose --galaxy 'http://localhost:8080' --api-key ${RANDOM_KEY}
+done
 
-# Install tool dependencies. This installs any missing tool dependencies via conda
+ Install tool dependencies. This installs any missing tool dependencies via conda
 install-tool-deps --tool $PWD/config/bootstrap_tools_conf.xml --verbose --galaxy 'http://localhost:8080' --api-key ${RANDOM_KEY}
 
 echo "Attempting to shutdown the Galaxy server..."
@@ -104,6 +103,9 @@ rm -rf bootstrap/cache \
        bootstrap/universe.sqlite \
        bootstrap/results.sqlite \
        bootstrap/config/galaxy.yml
+
+echo "Updating permissions on bootstrap config file"
+chmod -R a+r bootstrap/config
 
 echo "Finished! Check bootstrap.log in bootstrap/ for any errors..."
 
