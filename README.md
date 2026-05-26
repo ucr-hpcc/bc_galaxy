@@ -70,9 +70,9 @@ The reason two sessions are required is that on our systems, Galaxy can not be l
 
 ## Developer Notes
 
-- See the inline comments on PR https://github.com/OSC/bc_osc_galaxy/pull/7 for more information. The main PR topic description was copied below.
-- In order to allow remote user authentication to work for Galaxy instances launched via OnDemand, the source file for remote user authentication (`remoteuser.py`) was modified to include custom code developed by UCR HPCC. The installation script takes care of replacing the source file the modified file.
-- Other custom scripts and configuration files were developed to allow for a user to submit jobs via slurm and access the environment module system. These scripts and configuration files don't modify existing Galaxy code, instead they interface with existing Galaxy systems intended for modification by system administrators
+- In order to allow remote user authentication to work for Galaxy instances launched via OnDemand, the source file for remote user authentication (`remoteuser.py`) was modified to include custom code developed by UCR HPCC. The installation script takes care of replacing the source file the modified file. For more information regarding the changes done to `remoteuser.py`, please refer to the following [section](#authentication)
+- Other custom scripts and configuration files were developed to allow for a user to submit jobs via slurm and access the environment module system. These scripts and configuration files don't modify existing Galaxy code, instead they interface with existing Galaxy systems intended for modification by system administrators. These custom scripts are `custom_destinations.py`, `custom_tool_form_utils.py`, and `static/welcome.html`.
+- Custom webhook was developed to allow users to set job options for jobs submitted via slurm. The webhook is only active when a user launches a Galaxy session with the selected runner set as cluster. Currently the options set via this webhook are saved to a Galaxy user's sqlite database, allowing for the options to be used when queuing jobs via Galaxy.  The configuration files and scripts for the webhook can be found under `custom-scripts/slurm/`
 
 ### Overview
 Galaxy interface app runs on UCR HPC systems. The users can install, manage and run tools and workflows.
@@ -89,7 +89,7 @@ Galaxy interface app runs on UCR HPC systems. The users can install, manage and 
 - [x] Added configuration and tool files to interact with environment module system
 - [x] Get Data from external data sources has been resolved
 
-### Known Issues:
+### Known Issues
 
 See the following [page](https://hpcc.ucr.edu/manuals/hpc_cluster/selected_software/galaxy/#common-issues) for listed known issues not stated here
 
@@ -97,26 +97,27 @@ See the following [page](https://hpcc.ucr.edu/manuals/hpc_cluster/selected_softw
 Data files are stored in the user’s dataroot (default to `~/.galaxy/` configured in [Galaxy.yml](https://github.com/OSC/bc_osc_galaxy/blob/9afb0b7ec7452261149290cec5fb7d2d00b4c958/template/before.sh.erb#L124)
 
 ```
-azhu $ ls ~/.galaxy/
-citations  compiled_templates  control.sqlite  files  jobs_directory  object_store_cache  pbs  tmp  universe.sqlite
+mcuay001@bluejay:~/bigdata_operations$ ls .galaxy/
+cache   container_cache  dependencies  import-dir                 object_store_cache  shed_tool_data  tools              universe.sqlite
+config  control.sqlite   gravity       install_tool_sheds.sqlite  results.sqlite      tmp             tool_search_index
 ```
 
-### Authentication: 
+### Authentication
 Previously, `galaxy.yml` took in the user email address as the user authentication in the single-user mode. In this mode, any user on the cluster who knew the web address where the Galaxy instance was being hosted was able to access said Galaxy instance, without being the user who launched the Galaxy session via OnDemand in the first place. This is not a bug with Galaxy, this is an intentional feature as part of single-user mode as stated in the Galaxy configuration [manual](https://docs.galaxyproject.org/en/latest/admin/config.html#single-user).
 
 The benefit to using single-user mode is that a user can access a Galaxy instance without needing to authenticate, thus allowing for Galaxy to act as an application and not a web server, which OnDemand applications are configured as. Remote user mode is similar in that it bypasses the need for a user to login via a tradiational login portal but instead adds some authentication via HTTP headers, for more information please reference the Galaxy configuration [manual](https://docs.galaxyproject.org/en/latest/admin/config.html#use-remote-user) on the topic. Since Galaxy at its core is supposed to run as a stand alone web server, modifications to the `remoteuser.py` file had to be made to authenticate users via this mode through OnDemand.
 
-The modification to `remoteuser.py` is the addition of one function named `verify_user`, which simply checks if the remote user header passed via HTTP by nginx is the same user listed as the admin user on the galaxy config file, generated before each Galaxy instance launched via OnDemand. Further authentication can be configured as described [here].(https://galaxyproject.org/admin/config/external-user-auth/)
+The modification to `remoteuser.py` is the addition of one function named [`verify_user`](https://github.com/ucr-hpcc/bc_galaxy/blob/dev/custom-scripts/custom_remote_user.py#L238), which is implemented [here](https://github.com/ucr-hpcc/bc_galaxy/blob/dev/custom-scripts/custom_remote_user.py#L103) from lines 103 to 115. The function simply checks if the remote user header passed via HTTP by nginx is the same user listed as the admin user on the galaxy config file generated before each Galaxy instance launched via OnDemand. Modification of the `remoteuser.py` source code isn't the most ideal solution, however other authentication options provided by Galaxy either didn't support the remote user mode as desired or would've required extensive research and effort to implement. Further authentication methods can be configured as described [here](https://galaxyproject.org/admin/config/external-user-auth/), and maybe later on they can be configured as a replacement to the current solution implemented.
 
 ### Select Job Runner
 The users select the tool runner before starting the app. The developer adds destinations to job config file and assigns the user-selected runner to default.
-https://github.com/OSC/bc_osc_galaxy/blob/9afb0b7ec7452261149290cec5fb7d2d00b4c958/template/before.sh.erb#L51-L62
 Job runner field:
-![form](https://user-images.githubusercontent.com/22674713/68041214-71787080-fca6-11e9-88a3-32f6c508c802.JPG)
+
+<img width="620" height="370" alt="galaxy_runner_selection" src="https://github.com/user-attachments/assets/c1ecfc19-a683-47f5-abb2-e47ec538392c" />
 
 ### Two types of job runners we consider
 #### 1.) local: Run tools locally
-- tool jobs won't be queued and will run immediately
+- Tool jobs won't be queued and will run immediately
 - The number of concurrent jobs is limited, the maximum is the number of cores.
 - When the session ends, the unfinished jobs will end too.
 
