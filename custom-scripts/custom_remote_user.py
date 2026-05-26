@@ -9,8 +9,6 @@ from galaxy.util import safe_str_cmp
 
 log = logging.getLogger(__name__)
 
-#Used to get running Galaxy instance and user objects
-from galaxy.webapps.galaxy.api import get_app
 
 errorpage = """
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
@@ -236,7 +234,7 @@ class RemoteUser:
             """
             return self.error(start_response, title, message)
 
-    # Return user email if user exists in sql database
+    # Return user email if user is the same as the one listed in the config.yml file
     def verify_user(self, user_name):
         if self.admin_users[0].split('@')[0] != user_name:
             return None;
