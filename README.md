@@ -70,9 +70,10 @@ The reason two sessions are required is that on our systems, Galaxy can not be l
 
 ## Developer Notes
 
-- In order to allow remote user authentication to work for Galaxy instances launched via OnDemand, the source file for remote user authentication (`remoteuser.py`) was modified to include custom code developed by UCR HPCC. The installation script takes care of replacing the source file the modified file. For more information regarding the changes done to `remoteuser.py`, please refer to the following [section](#authentication)
-- Other custom scripts and configuration files were developed to allow for a user to submit jobs via slurm and access the environment module system. These scripts and configuration files don't modify existing Galaxy code, instead they interface with existing Galaxy systems intended for modification by system administrators. These custom scripts are `custom_destinations.py`, `custom_tool_form_utils.py`, and `static/welcome.html`.
-- Custom webhook was developed to allow users to set job options for jobs submitted via slurm. The webhook is only active when a user launches a Galaxy session with the selected runner set as cluster. Currently the options set via this webhook are saved to a Galaxy user's sqlite database, allowing for the options to be used when queuing jobs via Galaxy.  The configuration files and scripts for the webhook can be found under `custom-scripts/slurm/`
+- In order to allow remote user authentication to work for Galaxy instances launched via OnDemand, the source file for remote user authentication (`remoteuser.py`) was modified to include custom code developed by UCR HPCC. The installation script takes care of replacing the source file with the modified file. For more information regarding the changes done to `remoteuser.py`, please refer to the following [section](#authentication)
+- Other custom scripts and configuration files were developed to allow for a user to submit jobs via slurm and access the environment module system. These scripts and configuration files don't modify existing Galaxy code, instead they interface with existing Galaxy systems intended for modification by system administrators. For more information regarding the implementation, please refer to the following [section](#job-runners).
+- Custom webhook was developed to allow users to set job options for jobs submitted via slurm. The webhook is only active when a user launches a Galaxy session with the selected runner set as cluster. Currently the options set via this webhook are saved to a Galaxy user's sqlite database, allowing for the options to be used when queuing jobs via Galaxy.  The configuration files and scripts for the webhook can be found under `custom-scripts/slurm/`. For more information regarding the implementation, please refer to the following [section](#slurm-webhook).
+- Modification to configuration files were made to allow for Galaxy instances to interact with the environment module system on UCR's HPC cluster. Initialization script was developed for preset tools from the usegalaxy-tools [repo](https://github.com/galaxyproject/usegalaxy-tools) to be avabile for all Galaxy instances launched via OnDemand. For more information regarding the implementation, please refer to the following [section](#modules-and-preset-tools) 
 
 ### Overview
 Galaxy interface app runs on UCR HPC systems. The users can install, manage and run tools and workflows.
@@ -115,7 +116,7 @@ Job runner field:
 
 <img width="620" height="370" alt="galaxy_runner_selection" src="https://github.com/user-attachments/assets/c1ecfc19-a683-47f5-abb2-e47ec538392c" />
 
-### Two types of job runners we consider
+### Job Runners
 #### 1.) local: Run tools locally
 - Tool jobs won't be queued and will run immediately
 - The number of concurrent jobs is limited, the maximum is the number of cores.
@@ -125,3 +126,14 @@ Job runner field:
 - When the session ends, the unfinished jobs will continue to run.
 - Unlimited number of concurrent jobs
 - Galaxy can only submit jobs to the partitions the user who launched Galaxy as has access too.
+
+Job runners are set and controlled by two files, the first being a configuration file generated at runtime via [`before.sh.yml`](https://github.com/ucr-hpcc/bc_galaxy/blob/dev/template/before.sh.erb#L44) and the second being a python script`custom_destinations.py` found under the `custom-scripts/` directory. The job runner selected via OnDemand is set in the configuration file [here](https://github.com/ucr-hpcc/bc_galaxy/blob/dev/template/before.sh.erb#L54), with the local option corresponding to the local runner in the configuration file and the cluster option corresponding to the slurm runner. The options for each runner are set in the destination block and are basically the same for both runners, all we're doing here is setting the path where the environment modules are, the number of cores to utilize for local jobs, and loading in the workspace module to define where temporary files generated should be placed.
+
+The default runner is `dynamic_cores_time`, which dynamically controls job settings and destinations during runtime. Destinations in Galaxy just define what runner a job should use. This runner is custom and defined as a function in the `custom_destinations.py` file. The main reason why we're using a custom runner is mainly to configure job options for jobs submitted via slurm, options such as the partition to use, amount of cores, etc. If a dynamic job runner is not used, then these options must be defined in the configuration file generated via `before.sh.yml` and once Galaxy is running, this file can't be updated dynamically. For more information regarding job runners and custom destinations, refer to the Galaxy manual on the topic [here](https://docs.galaxyproject.org/en/latest/admin/jobs.html)
+
+### Slurm Webhook
+Because job options for jobs submitted via slurm are not something a Galaxy user can modify directly, a custom webhook was developed to allow users to set these options via Galaxy. An example of how the webhook works on the user side can be found [here](https://hpcc.ucr.edu/manuals/hpc_cluster/selected_software/galaxy/#extra-galaxy-features). The webhook files can be found under the `custom-scripts/slurm` directory and is composed of 4 files, those being `config.yml`, `script.js`, `styles.css`, and `__init__.py` — with `script.js` and `__init__.py` being the most important as these two are main files that handle receiving the job options from a Galaxy user and updating the Galaxy session in the backend with the job options for `custom_destinations.py` to use.
+
+The file `script.js` creates the menu and text fields the user interacts with and calls `__init__.py`, passing in the information the user supplied in JSON format [here](https://github.com/ucr-hpcc/bc_galaxy/blob/dev/custom-scripts/slurm/script.js#L155). The file `__init__.py` then [updates](https://github.com/ucr-hpcc/bc_galaxy/blob/dev/custom-scripts/slurm/__init__.py#L47) a user object's preferences field in dictionary format, with the key being 'slurm' and the value being the JSON data received. There is also an if statement that will simply return the partitions a user has access to, this is just to populate the 'Partitions' field on the menu created by `script.js`. For more information regarding webhooks, please refer to the Galaxy manual on the topic [here](https://docs.galaxyproject.org/en/latest/admin/special_topics/webhooks.html).
+
+### Modules and Preset Tools
