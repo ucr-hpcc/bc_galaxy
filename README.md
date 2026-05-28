@@ -29,7 +29,7 @@ git checkout <tag/branch>
 
 Install Galaxy and dependencies
 ```sh
-sh install-galaxy.sh
+sh install-galaxy-part1.sh
 ```
 
 You will not need to do anything beyond this as all necessary assets are
@@ -46,7 +46,7 @@ git checkout <tag/branch>
 
 Again, you do not need to restart the app as it isn't a Passenger app.
 
-To configure preset tools for Galaxy from the [usegalaxy-tools](https://github.com/galaxyproject/usegalaxy-tools) repo, you will need too at least two SSH sessions on a compute node or use Tmux and open two panes to run the scripts simultaneously. One session will initialize the necessary files and directory to bootstrap a Galaxy instance and the other session will connect to that Galaxy session in order to install the tools from the usegalaxy-tools repo onto the bootstrap Galaxy instance.
+To configure preset tools for Galaxy from the [usegalaxy-tools](https://github.com/galaxyproject/usegalaxy-tools) repo, you will need at least two SSH sessions on the same compute node. One session will initialize the necessary files and directory to bootstrap a Galaxy instance and the other session will connect to that Galaxy session in order to install the tools from the usegalaxy-tools repo onto the bootstrap Galaxy instance.
 
 In one session run the following:
 ```sh
@@ -58,7 +58,7 @@ In the second session run the following:
 sh install-galaxy-part2-p2.sh
 ```
 
-The reason two sessions are required is that on our systems, Galaxy can not be launched in daemon mode under the directory where environment modules are stored. To work around this, we just launch Galaxy normally in the foreground and then use [Ephemeris](https://ephemeris.readthedocs.io/en/latest/) to automate the process of configuring and installing preset tools.
+The reason why two sessions are required is that on our systems, Galaxy can not be launched in daemon mode under the directory where environment modules are stored. To work around this, we just launch Galaxy normally in the foreground and then use [Ephemeris](https://ephemeris.readthedocs.io/en/latest/) to automate the process of configuring and installing preset tools.
 
 ## Contributing
 
@@ -138,3 +138,5 @@ The file `script.js` creates the menu and text fields the user interacts with an
 
 ### Modules and Preset Tools
 The Galaxy environment module on the cluster comes configured with tools from the usegalaxy-tools [repo](https://github.com/galaxyproject/usegalaxy-tools/tree/master), specifically the tools listed under the `usegalaxy.org` directory in the repo. These are the same tools installed and configured on Galaxy's public accessible instance [https://usegalaxy.org](https://usegalaxy.org ). These tools are configured using the `yaml.lock` files from the repo, the reason being that these files organize tools by panel sections properly which the `yaml` files in the repo don't. The tools are installed by through `install-galaxy-part2-p2.sh`, with following [line](https://github.com/ucr-hpcc/bc_galaxy/blob/dev/install-galaxy-part2-p2.sh#L29) downloading the tool configuration files and updating the necessary Galaxy configuration files and the final [line](https://github.com/ucr-hpcc/bc_galaxy/blob/dev/install-galaxy-part2-p2.sh#L33) downloads the actual binary for a specific tool via conda.
+
+
