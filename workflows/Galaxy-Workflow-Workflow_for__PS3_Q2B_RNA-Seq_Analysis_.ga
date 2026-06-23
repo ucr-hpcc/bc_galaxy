@@ -1,0 +1,356 @@
+{
+    "a_galaxy_workflow": "true",
+    "annotation": "",
+    "comments": [],
+    "format-version": "0.1",
+    "name": "Workflow for 'PS3 Q2B RNA-Seq Analysis'",
+    "report": {
+        "markdown": "\n# Workflow Execution Report\n\n## Workflow Inputs\n```galaxy\ninvocation_inputs()\n```\n\n## Workflow Outputs\n```galaxy\ninvocation_outputs()\n```\n\n## Workflow\n```galaxy\nworkflow_display()\n```\n"
+    },
+    "steps": {
+        "0": {
+            "annotation": "",
+            "content_id": null,
+            "errors": null,
+            "id": 0,
+            "input_connections": {},
+            "inputs": [
+                {
+                    "description": "",
+                    "name": "Arabidopsis_thaliana.TAIR10.dna.toplevel.fa"
+                }
+            ],
+            "label": "Arabidopsis_thaliana.TAIR10.dna.toplevel.fa",
+            "name": "Input dataset",
+            "outputs": [],
+            "position": {
+                "left": 25,
+                "top": 211.99322780760104
+            },
+            "tool_id": null,
+            "tool_state": "{\"optional\": false, \"tag\": null}",
+            "tool_version": null,
+            "type": "data_input",
+            "uuid": "f94c4433-3bcf-4783-85c3-d077bc250e4f",
+            "when": null,
+            "workflow_outputs": []
+        },
+        "1": {
+            "annotation": "",
+            "content_id": null,
+            "errors": null,
+            "id": 1,
+            "input_connections": {},
+            "inputs": [
+                {
+                    "description": "",
+                    "name": "Arabidopsis_thaliana.TAIR10.38.gtf"
+                }
+            ],
+            "label": "Arabidopsis_thaliana.TAIR10.38.gtf",
+            "name": "Input dataset",
+            "outputs": [],
+            "position": {
+                "left": 12,
+                "top": 388.99322780760104
+            },
+            "tool_id": null,
+            "tool_state": "{\"optional\": false, \"tag\": null}",
+            "tool_version": null,
+            "type": "data_input",
+            "uuid": "a42e84c9-ff5a-4a8f-8a08-1c36a5de4e8a",
+            "when": null,
+            "workflow_outputs": []
+        },
+        "2": {
+            "annotation": "",
+            "content_id": "toolshed.g2.bx.psu.edu/repos/iuc/sra_tools/fastq_dump/3.1.1+galaxy1",
+            "errors": null,
+            "id": 2,
+            "input_connections": {},
+            "inputs": [
+                {
+                    "description": "runtime parameter for tool Download and Extract Reads in FASTQ",
+                    "name": "input"
+                }
+            ],
+            "label": null,
+            "name": "Download and Extract Reads in FASTQ",
+            "outputs": [
+                {
+                    "name": "list_paired",
+                    "type": "input"
+                },
+                {
+                    "name": "list_single",
+                    "type": "input"
+                }
+            ],
+            "position": {
+                "left": 0,
+                "top": 549.993227807601
+            },
+            "post_job_actions": {},
+            "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/sra_tools/fastq_dump/3.1.1+galaxy1",
+            "tool_shed_repository": {
+                "changeset_revision": "8848455c0270",
+                "name": "sra_tools",
+                "owner": "iuc",
+                "tool_shed": "toolshed.g2.bx.psu.edu"
+            },
+            "tool_state": "{\"adv\": {\"defline_seq\": \"@$ac.$sn[_$rn]/$ri\", \"minID\": null, \"maxID\": null, \"minlen\": null, \"split\": true, \"alignments\": \"both\", \"region\": null, \"matepairDist\": null, \"readfilter\": \"\", \"spotgroups\": null, \"clip\": false, \"skip_technical\": false, \"table\": \"\"}, \"input\": {\"input_select\": \"file_list\", \"__current_case__\": 2, \"file_list\": {\"__class__\": \"RuntimeValue\"}}, \"outputformat\": \"fastqsanger.gz\", \"__page__\": 0, \"__rerun_remap_job_id__\": null}",
+            "tool_uuid": null,
+            "tool_version": "3.1.1+galaxy1",
+            "type": "tool",
+            "uuid": "c3fffa43-2c2b-4780-b7cf-8b2a690fa283",
+            "when": null,
+            "workflow_outputs": []
+        },
+        "3": {
+            "annotation": "",
+            "content_id": "toolshed.g2.bx.psu.edu/repos/pjbriggs/trimmomatic/trimmomatic/0.39+galaxy2",
+            "errors": null,
+            "id": 3,
+            "input_connections": {
+                "readtype|fastq_in": {
+                    "id": 2,
+                    "output_name": "list_single"
+                }
+            },
+            "inputs": [
+                {
+                    "description": "runtime parameter for tool Trimmomatic",
+                    "name": "readtype"
+                }
+            ],
+            "label": null,
+            "name": "Trimmomatic",
+            "outputs": [
+                {
+                    "name": "fastq_out",
+                    "type": "input"
+                }
+            ],
+            "position": {
+                "left": 281,
+                "top": 545.993227807601
+            },
+            "post_job_actions": {},
+            "tool_id": "toolshed.g2.bx.psu.edu/repos/pjbriggs/trimmomatic/trimmomatic/0.39+galaxy2",
+            "tool_shed_repository": {
+                "changeset_revision": "b9aaed85cbd1",
+                "name": "trimmomatic",
+                "owner": "pjbriggs",
+                "tool_shed": "toolshed.g2.bx.psu.edu"
+            },
+            "tool_state": "{\"__input_ext\": \"fastqsanger.gz\", \"chromInfo\": \"/cvmfs/data.galaxyproject.org/managed/len/ucsc/?.len\", \"illuminaclip\": {\"do_illuminaclip\": \"yes\", \"__current_case__\": 0, \"adapter_type\": {\"standard_or_custom\": \"standard\", \"__current_case__\": 0, \"adapter_fasta\": \"TruSeq3-SE.fa\"}, \"seed_mismatches\": \"2\", \"palindrome_clip_threshold\": \"30\", \"simple_clip_threshold\": \"10\", \"min_adapter_len\": \"8\", \"keep_both_reads\": true}, \"operations\": [{\"__index__\": 0, \"operation\": {\"name\": \"SLIDINGWINDOW\", \"__current_case__\": 0, \"window_size\": \"4\", \"required_quality\": \"20\"}}], \"output_err\": false, \"output_logs\": false, \"quality_score\": null, \"readtype\": {\"single_or_paired\": \"se\", \"__current_case__\": 0, \"fastq_in\": {\"__class__\": \"ConnectedValue\"}}, \"readtype|fastq_in|__identifier__\": \"SRR2221854\", \"__page__\": 0, \"__rerun_remap_job_id__\": null}",
+            "tool_uuid": null,
+            "tool_version": "0.39+galaxy2",
+            "type": "tool",
+            "uuid": "7c57e10e-b9bf-4432-aa0f-b986a18e1e79",
+            "when": null,
+            "workflow_outputs": []
+        },
+        "4": {
+            "annotation": "",
+            "content_id": "toolshed.g2.bx.psu.edu/repos/devteam/fastqc/fastqc/0.74+galaxy1",
+            "errors": null,
+            "id": 4,
+            "input_connections": {
+                "input_file": {
+                    "id": 2,
+                    "output_name": "list_single"
+                }
+            },
+            "inputs": [],
+            "label": null,
+            "name": "FastQC",
+            "outputs": [
+                {
+                    "name": "html_file",
+                    "type": "html"
+                },
+                {
+                    "name": "text_file",
+                    "type": "txt"
+                }
+            ],
+            "position": {
+                "left": 299,
+                "top": 676.993227807601
+            },
+            "post_job_actions": {},
+            "tool_id": "toolshed.g2.bx.psu.edu/repos/devteam/fastqc/fastqc/0.74+galaxy1",
+            "tool_shed_repository": {
+                "changeset_revision": "2c64fded1286",
+                "name": "fastqc",
+                "owner": "devteam",
+                "tool_shed": "toolshed.g2.bx.psu.edu"
+            },
+            "tool_state": "{\"__input_ext\": \"input\", \"adapters\": null, \"chromInfo\": \"/cvmfs/data.galaxyproject.org/managed/len/ucsc/?.len\", \"contaminants\": null, \"input_file\": {\"__class__\": \"ConnectedValue\"}, \"input_file|__identifier__\": \"SRR2221854\", \"kmers\": \"7\", \"limits\": null, \"min_length\": null, \"nogroup\": false, \"__page__\": 0, \"__rerun_remap_job_id__\": null}",
+            "tool_uuid": null,
+            "tool_version": "0.74+galaxy1",
+            "type": "tool",
+            "uuid": "be1d72b1-47da-43c9-b83c-7098ef2fe395",
+            "when": null,
+            "workflow_outputs": []
+        },
+        "5": {
+            "annotation": "",
+            "content_id": "toolshed.g2.bx.psu.edu/repos/devteam/fastqc/fastqc/0.74+galaxy1",
+            "errors": null,
+            "id": 5,
+            "input_connections": {
+                "input_file": {
+                    "id": 3,
+                    "output_name": "fastq_out"
+                }
+            },
+            "inputs": [],
+            "label": null,
+            "name": "FastQC",
+            "outputs": [
+                {
+                    "name": "html_file",
+                    "type": "html"
+                },
+                {
+                    "name": "text_file",
+                    "type": "txt"
+                }
+            ],
+            "position": {
+                "left": 646,
+                "top": 0.0
+            },
+            "post_job_actions": {},
+            "tool_id": "toolshed.g2.bx.psu.edu/repos/devteam/fastqc/fastqc/0.74+galaxy1",
+            "tool_shed_repository": {
+                "changeset_revision": "2c64fded1286",
+                "name": "fastqc",
+                "owner": "devteam",
+                "tool_shed": "toolshed.g2.bx.psu.edu"
+            },
+            "tool_state": "{\"__input_ext\": \"input\", \"adapters\": null, \"chromInfo\": \"/cvmfs/data.galaxyproject.org/managed/len/ucsc/?.len\", \"contaminants\": null, \"input_file\": {\"__class__\": \"ConnectedValue\"}, \"input_file|__identifier__\": \"SRR2221854\", \"kmers\": \"7\", \"limits\": null, \"min_length\": null, \"nogroup\": false, \"__page__\": 0, \"__rerun_remap_job_id__\": null}",
+            "tool_uuid": null,
+            "tool_version": "0.74+galaxy1",
+            "type": "tool",
+            "uuid": "3bd944c9-f5c0-4e77-a9b4-79edf673307a",
+            "when": null,
+            "workflow_outputs": []
+        },
+        "6": {
+            "annotation": "",
+            "content_id": "toolshed.g2.bx.psu.edu/repos/iuc/hisat2/hisat2/2.2.1+galaxy1",
+            "errors": null,
+            "id": 6,
+            "input_connections": {
+                "library|input_1": {
+                    "id": 3,
+                    "output_name": "fastq_out"
+                },
+                "reference_genome|history_item": {
+                    "id": 0,
+                    "output_name": "output"
+                }
+            },
+            "inputs": [
+                {
+                    "description": "runtime parameter for tool HISAT2",
+                    "name": "library"
+                },
+                {
+                    "description": "runtime parameter for tool HISAT2",
+                    "name": "reference_genome"
+                }
+            ],
+            "label": null,
+            "name": "HISAT2",
+            "outputs": [
+                {
+                    "name": "output_alignments",
+                    "type": "bam"
+                },
+                {
+                    "name": "summary_file",
+                    "type": "txt"
+                }
+            ],
+            "position": {
+                "left": 651,
+                "top": 459.9932403564453
+            },
+            "post_job_actions": {},
+            "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/hisat2/hisat2/2.2.1+galaxy1",
+            "tool_shed_repository": {
+                "changeset_revision": "f4af63aaf57a",
+                "name": "hisat2",
+                "owner": "iuc",
+                "tool_shed": "toolshed.g2.bx.psu.edu"
+            },
+            "tool_state": "{\"__input_ext\": \"input\", \"adv\": {\"input_options\": {\"input_options_selector\": \"defaults\", \"__current_case__\": 0}, \"alignment_options\": {\"alignment_options_selector\": \"defaults\", \"__current_case__\": 0}, \"scoring_options\": {\"scoring_options_selector\": \"defaults\", \"__current_case__\": 0}, \"spliced_options\": {\"spliced_options_selector\": \"defaults\", \"__current_case__\": 0}, \"reporting_options\": {\"reporting_options_selector\": \"defaults\", \"__current_case__\": 0}, \"output_options\": {\"output_options_selector\": \"defaults\", \"__current_case__\": 0}, \"sam_options\": {\"sam_options_selector\": \"defaults\", \"__current_case__\": 0}, \"other_options\": {\"other_options_selector\": \"defaults\", \"__current_case__\": 0}}, \"chromInfo\": \"/cvmfs/data.galaxyproject.org/managed/len/ucsc/Arabidopsis_thaliana_TAIR10.len\", \"library\": {\"type\": \"single\", \"__current_case__\": 0, \"input_1\": {\"__class__\": \"ConnectedValue\"}, \"rna_strandness\": \"\"}, \"library|input_1|__identifier__\": \"SRR2221854\", \"reference_genome\": {\"source\": \"history\", \"__current_case__\": 1, \"history_item\": {\"__class__\": \"ConnectedValue\"}}, \"sum\": {\"new_summary\": false, \"summary_file\": true}, \"__page__\": 0, \"__rerun_remap_job_id__\": null}",
+            "tool_uuid": null,
+            "tool_version": "2.2.1+galaxy1",
+            "type": "tool",
+            "uuid": "5c1bdc19-33dc-4d34-bec9-63c9647cecb4",
+            "when": null,
+            "workflow_outputs": []
+        },
+        "7": {
+            "annotation": "",
+            "content_id": "toolshed.g2.bx.psu.edu/repos/iuc/featurecounts/featurecounts/2.1.1+galaxy0",
+            "errors": null,
+            "id": 7,
+            "input_connections": {
+                "alignment": {
+                    "id": 6,
+                    "output_name": "output_alignments"
+                },
+                "anno|reference_gene_sets": {
+                    "id": 1,
+                    "output_name": "output"
+                }
+            },
+            "inputs": [
+                {
+                    "description": "runtime parameter for tool featureCounts",
+                    "name": "anno"
+                }
+            ],
+            "label": null,
+            "name": "featureCounts",
+            "outputs": [
+                {
+                    "name": "output_short",
+                    "type": "tabular"
+                },
+                {
+                    "name": "output_summary",
+                    "type": "tabular"
+                }
+            ],
+            "position": {
+                "left": 967,
+                "top": 246.9776153564453
+            },
+            "post_job_actions": {},
+            "tool_id": "toolshed.g2.bx.psu.edu/repos/iuc/featurecounts/featurecounts/2.1.1+galaxy0",
+            "tool_shed_repository": {
+                "changeset_revision": "30f6985f0ac7",
+                "name": "featurecounts",
+                "owner": "iuc",
+                "tool_shed": "toolshed.g2.bx.psu.edu"
+            },
+            "tool_state": "{\"__input_ext\": \"input\", \"alignment\": {\"__class__\": \"ConnectedValue\"}, \"alignment|__identifier__\": \"SRR2221854\", \"anno\": {\"anno_select\": \"history\", \"__current_case__\": 2, \"reference_gene_sets\": {\"__class__\": \"ConnectedValue\"}, \"gff_feature_type\": \"exon\", \"gff_feature_attribute\": \"gene_id\", \"summarization_level\": false}, \"chromInfo\": \"/cvmfs/data.galaxyproject.org/managed/len/ucsc/Arabidopsis_thaliana_TAIR10.len\", \"extended_parameters\": {\"multifeatures\": {\"multifeat\": \"\", \"__current_case__\": 0}, \"exon_exon_junction_read_counting_enabled\": {\"count_exon_exon_junction_reads\": \"\", \"__current_case__\": 1}, \"long_reads\": false, \"by_read_group\": false, \"largest_overlap\": false, \"min_overlap\": \"1\", \"frac_overlap\": \"0\", \"frac_overlap_feature\": \"0\", \"read_extension_5p\": \"0\", \"read_extension_3p\": \"0\", \"read_reduction\": \"\", \"R\": false}, \"format\": \"tabdel_short\", \"include_feature_length_file\": false, \"pe_parameters\": {\"paired_end_status\": \"single_end\", \"__current_case__\": 0}, \"read_filtering_parameters\": {\"mapping_quality\": \"0\", \"splitonly\": \"\", \"primary\": false, \"ignore_dup\": false}, \"strand_specificity\": \"0\", \"__page__\": 0, \"__rerun_remap_job_id__\": null}",
+            "tool_uuid": null,
+            "tool_version": "2.1.1+galaxy0",
+            "type": "tool",
+            "uuid": "b237a7f0-84ca-4b50-ad24-73fe4a42a366",
+            "when": null,
+            "workflow_outputs": []
+        }
+    },
+    "tags": [],
+    "uuid": "15ad4814-24e9-4729-8c40-c836049d2f25",
+    "version": 1
+}

@@ -17,6 +17,7 @@ if [[ ! -d "$PWD/bootstrap" ]]; then
 	echo "Installing requirements.txt..."
 	$PWD/.venv/bin/python -m pip install -r usegalaxy-tools/requirements.txt
 	mv usegalaxy-tools bootstrap/
+	rm -rf usegalaxy-tools/.git
 	touch $PWD/bootstrap/install_tool_sheds.sqlite
 else
 	echo "Delete or move old bootstrap directory and rerun the script!"
