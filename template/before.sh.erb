@@ -106,6 +106,7 @@ galaxy:
   install_database_connection: "sqlite:///${DATAROOT}/install_tool_sheds.sqlite"
   admin_users: ${USER}@ondemand.ucr
   job_config_file: ${PWD}/job_conf.xml
+  simplified_workflow_run_ui: off
   database_auto_migrate: true
   database_wait: true
   dependency_resolvers:
@@ -135,6 +136,7 @@ if [ ! -d "${DATAROOT}" ]; then
     ${DATAROOT}/shed_tool_data \
     ${DATAROOT}/tools/modules
   cp ${GALAXY_ROOT_DIR}/bootstrap/install_tool_sheds.sqlite ${DATAROOT}/
+  cp ${GALAXY_ROOT_DIR}/bootstrap/workflow_sqlite_data.out ${DATAROOT}/
   cp ${GALAXY_ROOT_DIR}/bootstrap/config/bootstrap_tools_conf.xml \
      ${GALAXY_ROOT_DIR}/bootstrap/config/shed_tool_data_table_conf.xml \
      ${GALAXY_ROOT_DIR}/bootstrap/config/shed_data_manager_conf.xml \
@@ -144,6 +146,7 @@ if [ ! -d "${DATAROOT}" ]; then
   ln -s /rhome ${DATAROOT}/import-dir/rhome-galaxy
   source ${GALAXY_ROOT_DIR}/.venv/bin/activate
   python $GALAXY_ROOT_DIR/scripts/db.py -c ${GALAXY_CONFIG_FILE} init
+  sqlite3 ${DATAROOT}/universe.sqlite < ${DATAROOT}/workflow_sqlite_data.out
   chmod 770 ${DATAROOT}
 fi
 
@@ -160,7 +163,7 @@ cat > "${ENVIRONMENT_MODULES_CONFIG_FILE_PATH}" << EOL
   </section>
 </toolbox>
 EOL
-) 
+)
 fi
 
 # Creates mapping file between tools and modules
