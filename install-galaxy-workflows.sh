@@ -43,7 +43,8 @@ for wf in "${WORKFLOWS_TO_INSTALL[@]}"; do
 done
 
 # Install any missing workflow tool dependencies
-install-tool-deps --tool $PWD/bootstrap/config/bootstrap_tools_conf.xml --verbose --galaxy 'http://localhost:8080' --api-key ${BOOTSTRAP_KEY}
+install-tool-deps --tool $PWD/config/bootstrap_tools_conf.xml --verbose --galaxy 'http://localhost:8080' --api-key ${BOOTSTRAP_KEY}
+
 
 # Extract rows from universe.sqlite containing workflow information
 sqlite3 universe.sqlite <<EOF

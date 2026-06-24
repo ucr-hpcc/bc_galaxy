@@ -10,7 +10,7 @@ export GALAXY_CONFIG_FILE="$PWD/bootstrap/config/galaxy.yml"
 export GALAXY_ROOT_DIR="$PWD"
 
 # Get api key from config file
-RANDOM_KEY="$(grep 'bootstrap_admin_api_key:' ${GALAXY_CONFIG_FILE} | cut -d " " -f4)"
+BOOTSTRAP_KEY="$(grep 'bootstrap_admin_api_key:' ${GALAXY_CONFIG_FILE} | cut -d " " -f4)"
 
 source $PWD/.venv/bin/activate
 
@@ -26,11 +26,11 @@ fi
 TOOLS_TO_INSTALL=( $(ls $PWD/usegalaxy-tools/usegalaxy.org/*.yml.lock) )
 for tool in "${TOOLS_TO_INSTALL[@]}"; do
 	echo "Installing: ${tool}"
-	shed-tools install --tools-file ${tool} --latest --verbose --galaxy 'http://localhost:8080' --api-key ${RANDOM_KEY}
+	shed-tools install --tools-file ${tool} --latest --verbose --galaxy 'http://localhost:8080' --api-key ${BOOTSTRAP_KEY}
 done
 
 # Install tool dependencies. This installs any missing tool dependencies via conda
-install-tool-deps --tool $PWD/config/bootstrap_tools_conf.xml --verbose --galaxy 'http://localhost:8080' --api-key ${RANDOM_KEY}
+install-tool-deps --tool $PWD/config/bootstrap_tools_conf.xml --verbose --galaxy 'http://localhost:8080' --api-key ${BOOTSTRAP_KEY}
 
 echo "Bootstrap tools initialized! Please shut down the Galaxy server..."
 echo "Once the server is shutdown, remove the following directories/files:

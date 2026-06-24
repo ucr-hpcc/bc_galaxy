@@ -18,6 +18,9 @@ if [[ ! -d "$PWD/bootstrap" ]]; then
 	$PWD/.venv/bin/python -m pip install -r usegalaxy-tools/requirements.txt
 	mv usegalaxy-tools bootstrap/
 	rm -rf usegalaxy-tools/.git
+	git clone https://github.com/ucr-hpcc/bc_galaxy.git
+	mv bc_galaxy/workflows bootstrap/
+	rm -rf bc_galaxy
 	touch $PWD/bootstrap/install_tool_sheds.sqlite
 else
 	echo "Delete or move old bootstrap directory and rerun the script!"
@@ -29,7 +32,7 @@ export GALAXY_CONFIG_FILE="$PWD/bootstrap/config/galaxy.yml"
 export GALAXY_ROOT_DIR="$PWD"
 
 # Generate bootstrap api key
-RANDOM_KEY="$(openssl rand -base64 8)"
+BOOTSTRAP_KEY="$(openssl rand -base64 8)"
 
 # Generate Galaxy configuration file
 (
@@ -46,7 +49,7 @@ galaxy:
   config_dir: $PWD/config
   tool_dependency_dir: $PWD/bootstrap/dependencies
   managed_config_dir: $PWD/bootstrap/config
-  bootstrap_admin_api_key: ${RANDOM_KEY}
+  bootstrap_admin_api_key: ${BOOTSTRAP_KEY}
   install_database_connection: sqlite:///$PWD/bootstrap/install_tool_sheds.sqlite
   conda_auto_init: true
   conda_prefix: $PWD/bootstrap/dependencies/_conda
