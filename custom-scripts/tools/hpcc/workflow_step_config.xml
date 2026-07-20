@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<tool id="workflow_step_config" name="Workflow Slurm Paramters Configuration">
+  <code file="galaxy_hpcc_utils.py" />
+  <description>
+    Tool to configure slurm submission parameters for Workflow steps
+  </description>
+  <inputs>
+      <param name="workflow_id" type="text" optional="false" help="Paste the link to the workflow" label="Workflow link" />
+      <repeat name="workflow_settings" title="Workflow settings">
+        <param name="workflow_step" type="text" optional="false" help="The workflow step you wish to edit (e.g 2 or 3)" label="Workflow step" />
+        <param name="wf_cores" type="integer" value="2" optional="false" label="Number of cores" />
+        <param name="wf_mem" type="integer" value="4096" optional="false" label="Memory in MB" />
+        <param name="wf_runtime" type="text" optional="true" help="In the format of DD-HH:MM:SS. Eg. 2 days, 13 hours, 37 minutes, 42 seconds would be '2-13:37:42'. Max runtime is determined by the queue, see Queue Policies for more details." label="Job runtime" />
+        <param name="wf_partition" type="select" optional="false" multiple="false" label="Partition" dynamic_options="partitions_available()" help="For more details on our Queue Policies, see our Queue Policies page." />
+        <param name="wf_args" type="text" optional="true" label="Additional Slurm Arguments" help="Additional arguments to pass to slurm. eg '--gres=gpu:1' will be needed if running on the GPU partition." />
+       </repeat>
+  </inputs>
+  <outputs>
+   <data name="log_file" format="txt" label="Workflow Configuration Log" />
+  </outputs>
+  <command detect_errors="default"><![CDATA[
+  #set $workflow_id = $workflow_id.split("id=")[-1]
+    #for $step in $workflow_settings:
+        python $__tool_directory__/galaxy_workflow_config.py
+            "$workflow_id"
+            "$step.wf_cores"
+            "$step.wf_mem"
+            "$step.wf_runtime"
+            "$step.wf_partition"
+            "$step.wf_args"
+            "$step.workflow_step";
+    #end for
+  ]]></command>
+  <help><![CDATA[
+	You can't edit the individual slurm job submission parameters used in each step within a Galaxy Workflow. By default a Galaxy Workflow will run with the slurm job submission parameters specified via the the drop-down menu used to configure **all jobs** submitted via Slurm within a Galaxy session. This tool was created to remedy this issue and allow a user to set the slurm job submission parameters for every step in a given Workflow.
+
+	**How to use**:
+	This section will explain how to use the tool to configure a given Workflow and how each invidual field works in relation to this tool.
+
+	**Workflow link**: The link to the given Galaxy Workflow you would like to configure. You can only configure **one Galaxy Workflow at a time**! Below you can see an example of where to find the link to a Galaxy Workflow:
+
+==================================
+
+.. image:: ${static_path}/images/link_example.png
+
+
+==================================
+
+
+Paste the given link into the this field once you have copied it sucessfully.
+
+
+	**Workflow step**: The step number within the specified Galaxy workflow which you are configuring the slurm job submission parameters for. You can configure mutiple steps within the specified Galaxy Workflow by clicking the '+' button on the top right of this section.
+
+	**Number of Cores**: Specifies the number of CPU cores you would like to allocate to for this step's slurm job submission.
+
+	**Memory in MB**: Specifies the amount of memory you would like to allocate for this step's slurm job submission.
+
+	**Job Runtime**: Specifies the amount of time this step's slurm job submission will be active for.
+
+	**Partition**: Specifies the partition which this step's slurm job submission will be dispatched to.
+
+	**Additional Slurm Arguments**: Specifies any additional slurm flags to use for this step's slurm job submission.
+
+	After you have filled in all the required fields, click on the "Run Tool" button to have your Galaxy Workflow steps be queued up to update. Note that an output for this tool will not be created in Galaxy's "History" view. It can take a couple minutes before the tool is finished running, do not run the specified Galaxy Workflow until the tool has finished running.
+  ]]></help>
+</tool>

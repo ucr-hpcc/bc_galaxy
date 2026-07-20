@@ -1,0 +1,113 @@
+<?xml version="1.0"?>
+<tool id="run_module" name="Run modules">
+  <code file="galaxy_hpcc_utils.py" />
+  <description>
+    Tool to run HPCC environment modules via Galaxy.
+  </description>
+  <inputs>
+  <param name="env_modules" type="select" optional="false" label="Select Environment Modules" multiple="true" dynamic_options="modules_avail()" help="Search and select one or more modules to load" />
+     <conditional name="upload_type">
+        <param name="data_type" type="select" label="What upload type would you like to use?">
+            <option value="dataset" selected="true">Upload file/files as a dataset?</option>
+            <option value="raw">Specify location where file lies on the cluster?</option>
+        </param>
+        <when value="dataset">
+            <param name="data_input" type="data" optional="false" multiple="true" label="Input files" />
+        </when>
+        <when value="raw">
+            <param name="raw_input" type="file" optional="false" multiple="true" label="Input files" help="If you are specifying raw file paths, please separate them with ','"/>
+        </when>
+     </conditional>
+     <conditional name="how">
+         <param name="run_type" type="select" label="How to process file/files">
+             <option value="single" selected="true">Invdividually: Run the command individually for each file.</option>
+             <option value="group">Group: Run the command once and use all files as input.</option>
+        </param>
+        <when value="single">
+        </when>
+        <when value="group">
+        </when>
+     </conditional>
+    <param name="output_dir" type="text" optional="false" label="Output directory" help="Directory on the cluster where to store the output results. Must provide the full path." />
+    <param name="command" type="text" optional="false" label="Command" help="The command line instruction to run." />
+  </inputs>
+  <outputs>
+        <data name="output-files" auto_format="true">
+          <discover_datasets directory="temp-output" pattern="__designation__" visible="true" />
+        </data>
+  </outputs>
+  <command><![CDATA[
+      #if not $output_dir.endswith("/"):
+        #set $output_dir = str($output_dir) + "/"
+      #end if
+      mkdir temp-output;
+      #for $module in $env_modules:
+  	module load $module;
+      #end for
+      #if str($upload_type.data_type) == "dataset":
+        #if str($how.run_type) == "single":
+            #for $file in $upload_type.data_input:
+                touch $file.name;
+                cat $file > $file.name;
+                #set $old_command = $command
+                #set $command = $command.replace("$input", str($file.name))
+                #set $command = $command.replace("$output", str($output_dir))
+                $command;
+                #set $command = $old_command
+            #end for
+        #elif str($how.run_type) == "group":
+            #set $group_input = ""
+            #for $file in $upload_type.data_input:
+                touch $file.name; 
+                cat $file > $file.name;
+                #set $group_input += str($file.name) + " "
+            #end for
+            #set $command = $command.replace("$input", str($group_input))
+            #set $command = $command.replace("$output", str($output_dir))
+            $command;
+        #end if
+      #elif str($upload_type.data_type) == "raw":
+        #set $raw_input = $upload_type.raw_input.split(",")
+        #if str($how.run_type) == "single":
+            #for $file in $raw_input:
+                #set $old_command = $command
+                #set $command = $command.replace("$input", str($file))
+                #set $command = $command.replace("$output", str($output_dir))
+                $command;
+                #set $command = $old_command
+            #end for
+        #elif str($how.run_type) == "group":
+            #set $group_input = ""
+            #for $file in $raw_input:
+                #set $group_input += str($file) + " "
+            #end for
+            #set $command = $command.replace("$input", str($group_input))
+            #set $command = $command.replace("$output", str($output_dir))
+            $command;
+        #end if
+      #end if
+      cp -r $output_dir* temp-output/
+  ]]></command>
+  <help>
+          **How to use**: This section will explain how to use the tool to load an environment module via Galaxy and how each invidual field works in relation to this tool.
+
+  		**Select Environment Module**: Choose from the list of available modules to load. Any dependencies a module might have will be loaded automatically.
+
+                **What upload type would you like to use**: You can either provide a 'Dataset' which is a Galaxy specific format file or provide the full raw file path of a file on the cluster to be used.
+
+                **How to process file or files**: You can either process files in groups or individually. Below are examples on what each option does using the fastqc tool.
+                        - Individually: fastqc input1, fastqc input2, ... fastqc inputN.
+                                - Runs the tool individually for each input file.
+                        - Group: fastqc input1 input2 ... inputN etc.
+                                - Groups all files into one input to be passed to the tool.
+
+                **Output directory**: This is the full raw directory path where you would like to save your results to.
+
+
+                **Command**: This is the specific command line tool you are going to run. Please specify in inputs or outputs as $input or $output. Below is an example using the fastqc tool.
+
+                        - **Example: fastqc $input -o $output**
+
+                        Note: If you are going to process multiple files, you still would only specify one $input variable as the wrapper has logic to handle processing multiple files.
+  </help>
+</tool>
