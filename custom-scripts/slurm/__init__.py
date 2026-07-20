@@ -1,6 +1,7 @@
 import logging
 import subprocess
 import json
+import os
 from typing import(
     List,
 )
@@ -41,12 +42,8 @@ def main(trans, webhook, params):
         partition_list = partitions_available()
         return {"partitions": partition_list}
 
-    # Copy user
-    update_user = trans.user
-    # Add slurm parameters to new user preference 'slurm'
-    update_user.preferences["slurm"] = json.dumps(params)
-    # Add new change and commit to current session
-    trans.sa_session.add(update_user)
-    trans.sa_session.commit()
+    data_root = os.environ.get('DATAROOT')
+    cache_path = os.path.join(data_root, 'cache/slurm_settings.json')
+    with open(cache_path, "w") as f: json.dump(params, f)
 
     return {"message": "Slurm parameters updated."}
