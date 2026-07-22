@@ -1,0 +1,6 @@
+id: favicon
+type:
+  - masthead
+activate: true
+icon: fa-image
+tooltip: Placeholder

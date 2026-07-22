@@ -1,36 +1,18 @@
 cd "$(dirname "$0")"
 
 # Set current version
-VERSION="25.0.3"
-
-# Check if custom scripts directory exists
-if [[ ! -d "custom-scripts/$VERSION" ]]; then
-	mkdir -p "custom-scripts/$VERSION"
-	mkdir "custom-scripts/$VERSION/slurm/"
-	mkdir -p "custom-scripts/$VERSION/static/images"
-
-fi
-
+VERSION="25.1.2"
 
 # Install Galaxy
 if [[ ! -e v$VERSION ]]; then
     echo "Cloning Galaxy version v${VERSION}..."
     git clone -b v${VERSION} https://github.com/galaxyproject/galaxy.git
 
-
     echo "Downloading custom galaxy scripts from UCR HPCC repo..."
-# Get custom scripts from UCR HPCC github
-    wget -O "custom-scripts/$VERSION/custom_remote_user.py" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/custom_remote_user.py"
-    wget -O "custom-scripts/$VERSION/custom_destinations.py" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/custom_destinations.py"
-    wget -O "custom-scripts/$VERSION/custom_tool_form_utils.py" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/custom_tool_form_utils.py"
+    git clone https://github.com/ucr-hpcc/bc_galaxy.git
 
-    wget -O "custom-scripts/$VERSION/slurm/__init__.py" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/slurm/__init__.py"
-    wget -O "custom-scripts/$VERSION/slurm/config.yml" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/slurm/config.yml"
-    wget -O "custom-scripts/$VERSION/slurm/script.js" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/slurm/script.js"
-    wget -O "custom-scripts/$VERSION/slurm/styles.css" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/slurm/styles.css"
-    wget -O "custom-scripts/$VERSION/static/images/UC_Riverside_logo.svg" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/static/images/UC_Riverside_logo.svg"
-    wget -O "custom-scripts/$VERSION/static/welcome.html" "https://raw.githubusercontent.com/ucr-hpcc/bc_galaxy/refs/heads/dev/custom-scripts/static/welcome.html"
-
+    mv bc_galaxy/custom-scripts custom-scripts/$VERSION
+    rm -rf bc_galaxy
 fi
 
 
@@ -106,15 +88,24 @@ cd ..
 echo "Configuring custom scripts..."
 ln -s $PWD/custom-scripts/$VERSION/custom_destinations.py $PWD/$VERSION/lib/galaxy/jobs/rules/destinations.py
 
-ln -s $PWD/custom-scripts/$VERSION/slurm $PWD/$VERSION/config/plugins/webhooks
-# Disable unused webhooks
+# Configure webhooks
 sed -i 's/true/false/g' $PWD/$VERSION/config/plugins/webhooks/gtn/config.yml
+mkdir $PWD/$VERSION/config/plugins/webhooks/local_webhooks $PWD/$VERSION/config/plugins/webhooks/slurm_webhooks
+
+ln -s $PWD/custom-scripts/$VERSION/webhooks/slurm $PWD/$VERSION/config/plugins/webhooks/slurm_webhooks
+ln -s $PWD/custom-scripts/$VERSION/webhooks/favicon $PWD/$VERSION/config/plugins/webhooks/local_webhooks/favicon
 
 
 # Remove galaxy remote user and replace with custom remote user
 rm $VERSION/lib/galaxy/web/framework/middleware/remoteuser.py
 ln -s $PWD/custom-scripts/$VERSION/custom_remote_user.py $PWD/$VERSION/lib/galaxy/web/framework/middleware/remoteuser.py
 
+# Add static images
 cp -r $PWD/custom-scripts/$VERSION/static $VERSION
 
-echo "Please run part 2..."
+# Add custom HPCC tools
+ln -s $PWD/custom-scripts/$VERSION/tools/hpcc $PWD/$VERSION/tools/
+
+echo "Run install-galaxy-tools if you want to setup preconfigured Galaxy tools.
+      Run install-galaxy-workflows if you want to setup preconfigured Galaxy works.
+      Otherwise, Galaxy is ready to be used as a module."
