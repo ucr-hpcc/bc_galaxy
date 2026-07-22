@@ -1,7 +1,0 @@
-id: slurm
-type:
-  - masthead
-activate: true
-
-icon: fa-gear
-tooltip: Update Slurm parameters
