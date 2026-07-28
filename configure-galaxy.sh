@@ -1,4 +1,4 @@
-VERSION="25.0.3"
+VERSION="25.1.2"
 
 module purge -f
 module load workspace
@@ -67,4 +67,4 @@ python $GALAXY_ROOT_DIR/scripts/db.py -c ${GALAXY_CONFIG_FILE} init
 
 
 echo "Launching Galaxy..."
-sh $GALAXY_ROOT_DIR/run.sh --no-create-venv --skip-client-build --skip-wheels
+sh $GALAXY_ROOT_DIR/run.sh --skip-venv --skip-client-build --skip-wheels
