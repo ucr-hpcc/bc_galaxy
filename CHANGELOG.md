@@ -2,9 +2,32 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
-and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
+and this project adheres(kinda) to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## [Versions]
+## [0.0.3] - 2026-28-07
+### Added
+- Added `install-galaxy-workflows.sh` to initialize Galaxy workflows
+- Added `workflows` directory to host custom Galaxy workflow .ga files
+- Added `tools\hpcc` directory to host custom made Galaxy tools to interact with slurm and environment module system
+- Added custom Galaxy tool `workflow_step_config.xml` to edit the slurm parameters of any individual step in a workflow
+- Added custom Galaxy tool `run_module.xml` to allow a user to run jobs using environment modules. Previously, the tool was created at runtime
+- Added custom webhook `favicon` to render Galaxy favicon image properly
+
+## Changed
+- Updated `install-galaxy.sh` script to install a newer Galaxy version and configure custom Galaxy tools created as well as webhooks
+- Updated `custom_destinations.py` to edit slurm parameters for individual steps in a workflow based on workflow ID
+- Changed slurm webhook to store slurm parameter settings in a user's cache directory, generates file called `slurm_settings.jon`
+- Updated `custom-destinations.py` to reference `slurm_settings.json` when submitting slurm jobs via Galaxy
+- Updated `install-galaxy.sh` script to setup custom Galaxy tools from `tools\hpcc`
+- Changed `install-galaxy.sh` script to setup custom webhooks in their own separate directories
+- Changed `install-galaxy-part1.sh` to `install-galaxy.sh`
+- Changed `install-galaxy-part2-p1.sh` to `configure-galaxy.sh`
+- Changed `install-galaxy-part2-p2.sh` to `install-galaxy-tools.sh`
+
+## Fixed
+- Galaxy favicon image not rendering
+
 ## [0.0.2] - 2026-28-05
 ### Added
 - Added `install-galaxy-part1.sh` to install Galaxy 25.0.3
