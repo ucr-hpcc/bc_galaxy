@@ -93,7 +93,7 @@ sed -i 's/true/false/g' $PWD/$VERSION/config/plugins/webhooks/gtn/config.yml
 mkdir $PWD/$VERSION/config/plugins/webhooks/local_webhooks $PWD/$VERSION/config/plugins/webhooks/slurm_webhooks
 
 ln -s $PWD/custom-scripts/$VERSION/webhooks/slurm $PWD/$VERSION/config/plugins/webhooks/slurm_webhooks
-ln -s $PWD/custom-scripts/$VERSION/webhooks/favicon $PWD/$VERSION/config/plugins/webhooks/local_webhooks/favicon
+ln -s $PWD/custom-scripts/$VERSION/webhooks/favicon $PWD/$VERSION/config/plugins/webhooks/local_webhooks
 
 
 # Remove galaxy remote user and replace with custom remote user
