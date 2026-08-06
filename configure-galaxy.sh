@@ -1,7 +1,6 @@
 VERSION="25.1.2"
 
 module purge -f
-module load workspace
 
 cd $VERSION
 
