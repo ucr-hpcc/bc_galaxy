@@ -44,6 +44,8 @@ done
 # Install any missing workflow tool dependencies
 install-tool-deps --tool $PWD/config/bootstrap_tools_conf.xml --verbose --galaxy 'http://localhost:8080' --api-key ${BOOTSTRAP_KEY}
 
+# Remove left over yamls files
+rm workflows/*.yml
 
 # Extract rows from universe.sqlite containing workflow information
 sqlite3 universe.sqlite <<EOF
