@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<tool id="workflow_downloader" name="HPCC Workflow Updater">
+  <description>
+   Download Workflows hosted by UCR HPCC
+  </description>
+  <inputs>
+      <param name="api_key" type="text" optional="false" help="Paste API key" label="API Key" />
+  </inputs>
+  <outputs>
+   <data name="log_file" format="txt" label="HPCC Workflow Updater Log" />
+  </outputs>
+  <command detect_errors="exit_code"><![CDATA[
+  bash $__tool_directory__/workflow_download.sh "$api_key"
+  ]]></command>
+  <help><![CDATA[
+  	This tool is used to upate an OnDemand Galaxy instance to include any new workflows pushed to the HPCC's OnDemand Galaxy repository. The tool is intended mainly to be used by users running existing Galaxy instances created before the offcial release of Galaxy Open OnDemand on the HPCC cluster. Any Galaxy instances created after release should have workflows preconfigured.
+
+  **How to use**:
+  This section will explain how to use the tool to update your OnDemand Galaxy instance to include any workflows not already preconfigured from the HPCC's OnDemand Galaxy repository.
+
+  **Paste API key**:
+  In order to use this tool, you must generate an API key for your account in order to access your OnDemand Galaxy instance via the command line. For instructions on how to generate an API key for your account, please refer to the following guide `here <https://training.galaxyproject.org/training-material/faqs/galaxy/preferences_admin_api_key.html>`_. Once you have generated your API key, paste into the text field.
+
+  After you have filled in all the required fields, click on the "Run Tool" button to run this tool.
+  ]]></help>
+</tool>
