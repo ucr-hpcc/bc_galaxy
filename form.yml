@@ -4,6 +4,12 @@ attributes:
   modules: "slurm/ slurm-drmaa/ workspace/"
   bc_account: null
   bc_num_slots: 1
+  galaxy_version:
+    widget: select
+    label: "Galaxy Version"
+    options:
+      - "25.1.2"
+      - "25.0.3"
   num_cores:
     widget: "number_field"
     label: "Number of cores"
@@ -54,6 +60,7 @@ attributes:
       - [ "cluster", "slurm" ]
 form:
   - modules
+  - galaxy_version
   - working_dir
   - num_cores
   - num_mem

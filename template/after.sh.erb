@@ -4,6 +4,15 @@
 echo "Waiting for Galaxy Server to open port ${port}..."
 if wait_until_port_used "${host}:${port}" 600; then
   echo "Discovered Galaxy Server listening on port ${port}!"
+  if [[ -d "${DATAROOT}" ]]; then
+    echo "Cleaning up .galaxy cache directory..."
+    if ls "${DATAROOT}"/cache/*.json >/dev/null 2>&1; then
+      rm "${DATAROOT}"/cache/*.json
+      echo ".galaxy cache directory cleaned up!"
+    else
+      echo "Nothing to clean! Already cleaned up!"
+    fi
+  fi
 else
   echo "Timed out waiting for Galaxy Server to open port ${port}!"
   pkill -P ${SCRIPT_PID}

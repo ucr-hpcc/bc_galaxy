@@ -16,29 +16,54 @@ end
 
 %>
 
-export DATAROOT="<%= working_dir.to_s %>"/.galaxy
 
 # Find available port to run server on
 export port=$(find_port)
 
 # Ensure only required galaxy modules are loaded
 module purge -f
-module load galaxy
+module load galaxy/<%= context.galaxy_version %>
 module load <%= context.modules %>
 
 # Define Galaxy Variables
 export GALAXY_CONFIG_FILE="${PWD}/galaxy.yml"
 export RUNNER="<%= context.job_runner %>"
+export DATAROOT="<%= working_dir.to_s %>"/.galaxy
 
 
 ENVIRONMENT_MAPPING_FILE_PATH="${DATAROOT}/config/environment_modules_mapping.yml"
-ENVIRONMENT_MODULES_FILE_PATH="${DATAROOT}/tools/modules"
-ENVIRONMENT_MODULES_CONFIG_FILE_PATH="${DATAROOT}/config/env_modules_tools.xml"
-WEBHOOKS_DIR=${GALAXY_ROOT_DIR}/config/plugins/webhooks
+ENVIRONMENT_MODULES_FILE_PATH="${DATAROOT}/tools/helpers"
+ENVIRONMENT_MODULES_CONFIG_FILE_PATH="${DATAROOT}/config/helper_tools.xml"
+WEBHOOKS_DIR=${GALAXY_ROOT_DIR}/config/plugins/webhooks/local_webhooks
 
 
-if [[ $RUNNER == "local" ]]; then
-  WEBHOOKS_DIR=""
+if [[ $RUNNER == "slurm" ]]; then
+  WEBHOOKS_DIR=${GALAXY_ROOT_DIR}/config/plugins/webhooks/local_webhooks,${GALAXY_ROOT_DIR}/config/plugins/webhooks/slurm_webhooks
+(
+umask 077
+cat > "${PWD}/hpcc_tools.xml" << EOL
+<?xml version="1.0"?>
+<toolbox monitor="false">
+  <section id="hpcc_tools" name="UCR HPCC Tools">
+        <tool file="${GALAXY_ROOT_DIR}/tools/hpcc/workflow_step_config.xml" />
+  	<tool file="${GALAXY_ROOT_DIR}/tools/hpcc/run_module.xml" />
+  </section>
+</toolbox>
+EOL
+)
+else
+(
+umask 077
+cat > "${PWD}/hpcc_tools.xml" << EOL
+<?xml version="1.0"?>
+<toolbox monitor="false">
+  <section id="hpcc_tools" name="UCR HPCC Tools">
+  	<tool file="${GALAXY_ROOT_DIR}/tools/hpcc/run_module.xml" />
+        <tool file="${GALAXY_ROOT_DIR}/tools/hpcc/workflow_downloader.xml" />
+  </section>
+</toolbox>
+EOL
+)
 fi
 
 # Generate Galaxy job configuration file
@@ -62,10 +87,14 @@ cat > "${PWD}/job_conf.xml" << EOL
         </destination>
         <destination id="slurm" runner="slurm">
             <env id="HPCC_MODULES">${HPCC_MODULES}</env>
+            <env id="DATAROOT">${DATAROOT}</env>
+            <env id="port">${port}</env>
             <env exec="module load workspace/scratch"></env>
         </destination>
         <destination id="local" runner="local">
             <env id="HPCC_MODULES">${HPCC_MODULES}</env>
+            <env id="DATAROOT">${DATAROOT}</env>
+            <env id="port">${port}</env>
             <param id="tmp_dir">${SCRATCH}</param>
             <param id="local_slots"><%= context.num_cores %></param>
         </destination>
@@ -82,6 +111,7 @@ gravity:
   galaxy_user : ${USER}
   gunicorn:
     enable: true
+    preload: true
     bind: 0.0.0.0:${port}
 
 galaxy:
@@ -100,15 +130,16 @@ galaxy:
   webhooks_dir: ${WEBHOOKS_DIR}
   config_dir: ${GALAXY_ROOT_DIR}/config
   managed_config_dir: ${DATAROOT}/config
+  integrated_tool_panel_config: ${DATAROOT}/config/integrated_tool_panel.xml
   shed_tool_data_path: ${DATAROOT}/shed_tool_data
-  tool_config_file: ${GALAXY_ROOT_DIR}/lib/galaxy/config/sample/tool_conf.xml.sample,${ENVIRONMENT_MODULES_CONFIG_FILE_PATH},${DATAROOT}/config/bootstrap_tools_conf.xml
-  modules_mapping_files: ${ENVIRONMENT_MAPPING_FILE_PATH}
+  shed_tool_config_file: ${DATAROOT}/config/shed_tool_conf.xml
+  tool_config_file: ${GALAXY_ROOT_DIR}/lib/galaxy/config/sample/tool_conf.xml.sample,${PWD}/hpcc_tools.xml,${GALAXY_ROOT_DIR}/bootstrap/config/bootstrap_tools_conf.xml
+  tool_path: ${GALAXY_ROOT_DIR}/tools
+  tool_data_path: ${DATAROOT}/shed_tool_data
   install_database_connection: "sqlite:///${DATAROOT}/install_tool_sheds.sqlite"
-  admin_users: ${USER}@ondemand.ucr
+  admin_users: ${USER}@ucr.edu
   job_config_file: ${PWD}/job_conf.xml
   simplified_workflow_run_ui: off
-  database_auto_migrate: true
-  database_wait: true
   dependency_resolvers:
     - type: conda
       auto_init: false
@@ -119,6 +150,8 @@ galaxy:
     - type: conda
       auto_init: true
       auto_install: false
+      prefix: ${DATAROOT}/dependencies/_conda
+      exec: ${DATAROOT}/dependencies/_conda/bin/conda
     - type: modules
       versionless: true
       modulecmd: $(which modulecmd)
@@ -133,8 +166,7 @@ if [ ! -d "${DATAROOT}" ]; then
   mkdir -p ${DATAROOT}/dependencies \
     ${DATAROOT}/config \
     ${DATAROOT}/import-dir \
-    ${DATAROOT}/shed_tool_data \
-    ${DATAROOT}/tools/modules
+    ${DATAROOT}/shed_tool_data
   cp ${GALAXY_ROOT_DIR}/bootstrap/install_tool_sheds.sqlite ${DATAROOT}/
   cp ${GALAXY_ROOT_DIR}/bootstrap/workflow_sqlite_data.out ${DATAROOT}/
   cp ${GALAXY_ROOT_DIR}/bootstrap/config/bootstrap_tools_conf.xml \
@@ -142,176 +174,12 @@ if [ ! -d "${DATAROOT}" ]; then
      ${GALAXY_ROOT_DIR}/bootstrap/config/shed_data_manager_conf.xml \
      ${GALAXY_ROOT_DIR}/bootstrap/config/integrated_tool_panel.xml \
      ${DATAROOT}/config/
-  ln -s /bigdata ${DATAROOT}/import-dir/bigdata-galaxy
-  ln -s /rhome ${DATAROOT}/import-dir/rhome-galaxy
+  cp -r ${GALAXY_ROOT_DIR}/bootstrap/workflows ${DATAROOT}
+  ln -s /rhome/$USER ${DATAROOT}/import-dir/$USER
   source ${GALAXY_ROOT_DIR}/.venv/bin/activate
   python $GALAXY_ROOT_DIR/scripts/db.py -c ${GALAXY_CONFIG_FILE} init
   sqlite3 ${DATAROOT}/universe.sqlite < ${DATAROOT}/workflow_sqlite_data.out
+  rm ${DATAROOT}/workflow_sqlite_data.out
   chmod 770 ${DATAROOT}
 fi
 
-# Generate tool conf file
-# Create link to Galaxy main tools in data root dir and one for env modules
-if [ ! -f ${ENVIRONMENT_MODULES_CONFIG_FILE_PATH} ]; then
- (
-umask 077
-cat > "${ENVIRONMENT_MODULES_CONFIG_FILE_PATH}" << EOL
-<?xml version='1.0' encoding='utf-8'?>
-<toolbox monitor="true">
-  <section id="modules" name="Environment modules">
-    <!--DONTREMOVE-->
-  </section>
-</toolbox>
-EOL
-)
-fi
-
-# Creates mapping file between tools and modules
-if [[ ! -f "${ENVIRONMENT_MAPPING_FILE_PATH}" ]]; then
-  echo "Creating environment modules mapping file path..."
-(
-umask 077
-cat > "${ENVIRONMENT_MAPPING_FILE_PATH}" << EOL
-#DONTREMOVE
-EOL
-)
-fi
-
-# Extract list of modules currently available on the cluster
-MODULES="$(module avail -w 1 --output= 2>&1)"
-echo "Creating/Updating module tools xml files..."
-for module in ${MODULES}
-do
-  module_name="$(echo ${module} | cut -d "/" -f1 )"
-  version="$(echo ${module} | cut -d "/" -f2 )"
-
-  # If the module doesn't exist in the user's current tools directory then create the file for the module
-  if ! [ -f "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" ]; then
-    echo "Creating tool xml file for ${module_name}/${version}"
-(
-umask 077
-cat > "${ENVIRONMENT_MODULES_FILE_PATH}/${module_name}_${version}.xml" << EOL
-<?xml version="1.0"?>
-<tool id="${module_name}" name="${module_name}" version="${module_name}/${version}">
-  <requirements>
-    <requirement type="package" version="${version}">${module_name}</requirement>
-  </requirements>
-  <description>
-    Environment module ${module_name}/${version}
-  </description>
-   <stdio>
-    <exit_code range="1:" leveling="log" description="See log file for extra info" /> 
-  </stdio>
-  <inputs>
-     <conditional name="upload_type">
-        <param name="data_type" type="select" label="What upload type would you like to use?">
-            <option value="dataset" selected="true">Upload file/files as a dataset?</option>
-            <option value="raw">Specify location where file lies on the cluster?</option>
-        </param>
-        <when value="dataset">
-            <param name="data_input" type="data" optional="false" multiple="true" label="Input files" /> 
-        </when>
-        <when value="raw">
-            <param name="raw_input" type="file" optional="false" multiple="true" label="Input files" help="If you are specifying raw file paths, please separate them with ','"/> 
-        </when>
-     </conditional>
-     <conditional name="how">
-         <param name="run_type" type="select" label="How to process file/files">
-             <option value="single" selected="true">Invdividually: Run the command individually for each file.</option>
-             <option value="group">Group: Run the command once and use all files as input.</option>
-        </param>
-        <when value="single">
-        </when>
-        <when value="group">
-        </when>
-     </conditional>
-    <param name="output_dir" type="text" optional="false" label="Output directory" help="Directory on the cluster where to store the output results. Must provide the full path." />
-    <param name="command" type="text" optional="false" label="Command" help="The command line instruction to run." />
-  </inputs>
-  <outputs>
-        <data name="output-files" auto_format="true">
-          <discover_datasets directory="temp-output" pattern="__designation__" visible="true" />
-        </data>
-  </outputs> 
-  <command><![CDATA[
-      #if not \$output_dir.endswith("/"):
-        #set \$output_dir = str(\$output_dir) + "/"
-      #end if
-      mkdir temp-output;
-      #if str(\$upload_type.data_type) == "dataset":
-        #if str(\$how.run_type) == "single":
-            #for \$file in \$upload_type.data_input:
-                touch \$file.name; 
-                cat \$file > \$file.name; 
-                #set \$old_command = \$command
-                #set \$command = \$command.replace("\$input", str(\$file.name))
-                #set \$command = \$command.replace("\$output", str(\$output_dir))
-                \$command;
-                #set \$command = \$old_command
-            #end for 
-        #elif str(\$how.run_type) == "group":
-            #set \$group_input = ""
-            #for \$file in \$upload_type.data_input:
-                touch \$file.name; 
-                cat \$file > \$file.name;
-                #set \$group_input += str(\$file.name) + " "
-            #end for
-            #set \$command = \$command.replace("\$input", str(\$group_input))
-            #set \$command = \$command.replace("\$output", str(\$output_dir))
-            \$command;
-        #end if
-      #elif str(\$upload_type.data_type) == "raw":
-        #set \$raw_input = \$upload_type.raw_input.split(",")
-        #if str(\$how.run_type) == "single":
-            #for \$file in \$raw_input:
-                #set \$old_command = \$command
-                #set \$command = \$command.replace("\$input", str(\$file))
-                #set \$command = \$command.replace("\$output", str(\$output_dir))
-                \$command;
-                #set \$command = \$old_command
-            #end for 
-        #elif str(\$how.run_type) == "group":
-            #set \$group_input = ""
-            #for \$file in \$raw_input:
-                #set \$group_input += str(\$file) + " "
-            #end for
-            #set \$command = \$command.replace("\$input", str(\$group_input))
-            #set \$command = \$command.replace("\$output", str(\$output_dir))
-            \$command;
-        #end if
-      #end if
-      cp -r \$output_dir* temp-output/
-  ]]></command>
-  <help>
-        **IMPORTANT**: This is a **wrapper tool** to run most tools UCR HPCC provides via Galaxy. This wrapper may not work for each tool, as each tool is unique and might need to be configured differently. If you have experience creating/modifying Galaxy tools, then you can tweak this and all other environment module wrappers provided for Galaxy by editing it's respective tool xml file found in your specified **Galaxy Database** directory under tools/modules.  
-
-          **How to use**:
-
-                **What upload type would you like to use**: You can either provide a 'Dataset' which is a Galaxy specific format file or provide the full raw file path of a file on the cluster to be used.
-
-                **How to process file or files**: You can either process files in groups or individually. Below are examples on what each option does using the fastqc tool.
-                        
-                        - Individually: fastqc input1, fastqc input2, ... fastqc inputN.
-                                - Runs the tool individually for each input file.
-                        - Group: fastqc input1 input2 ... inputN etc.
-                                - Groups all files into one input to be passed to the tool.	
-                **Output directory**: This is the full raw directory path where you would like to save your results to.
-
-
-                **Command**: This is the specific command line tool you are going to run. Please specify in inputs or outputs as \$input or \$output. Below is an example using the fastqc tool.
-
-                        - **Example: fastqc \$input -o \$output**
-
-                        Note: If you are going to process multiple files, you still would only specify one \$input variable as the wrapper has logic to handle processing multiple files. 
-        
-          
-  </help> 
-</tool>
-EOL
-)
-# Add module to tools configuration
-  sed -i 's|<!--DONTREMOVE-->|<tool file="'${ENVIRONMENT_MODULES_FILE_PATH}'/'${module_name}'_'${version}'.xml" />\n    <!--DONTREMOVE-->|g' ${ENVIRONMENT_MODULES_CONFIG_FILE_PATH}
-# Add module to the mapping file
-  sed -i 's|#DONTREMOVE|- form:\n\     name: '${module_name}'\n     version: "'${version}'"\n  to:\n     name: '${module_name}'\n     version: "'${version}'"\n#DONTREMOVE|g' ${ENVIRONMENT_MAPPING_FILE_PATH}
-  fi
-done
