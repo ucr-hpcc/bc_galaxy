@@ -22,7 +22,7 @@ export port=$(find_port)
 
 # Ensure only required galaxy modules are loaded
 module purge -f
-module load galaxy/<%= context.galaxy_version %>
+module load galaxy
 module load <%= context.modules %>
 
 # Define Galaxy Variables
@@ -140,6 +140,7 @@ galaxy:
   admin_users: ${USER}@ucr.edu
   job_config_file: ${PWD}/job_conf.xml
   simplified_workflow_run_ui: off
+  database_auto_migrate: true
   dependency_resolvers:
     - type: conda
       auto_init: false
