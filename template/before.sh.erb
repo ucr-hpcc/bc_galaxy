@@ -113,6 +113,8 @@ gravity:
     enable: true
     preload: true
     bind: 0.0.0.0:${port}
+  celery:
+    loglevel: INFO
 
 galaxy:
   data_dir: ${DATAROOT}
@@ -138,6 +140,7 @@ galaxy:
   tool_data_path: ${DATAROOT}/shed_tool_data
   install_database_connection: "sqlite:///${DATAROOT}/install_tool_sheds.sqlite"
   admin_users: ${USER}@ucr.edu
+  log_level: INFO
   job_config_file: ${PWD}/job_conf.xml
   simplified_workflow_run_ui: off
   database_auto_migrate: true
