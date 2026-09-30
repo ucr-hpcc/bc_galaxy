@@ -84,6 +84,16 @@ See history of all changes made [here](https://github.com/ucr-hpcc/bc_galaxy/blo
 
 ### Known Issues
 
+- Long load times when adding
+`bootstrap_tools_conf.xml` to the list of tools defined in to be loaded upon initializing a Galaxy session through OnDemand. This list is defined in the a user's `galaxy.yml` configuration file under the `section tool_config_file`, which is created during every Galaxy session initialized through OnDemand. The current solution implemented to avoid these long old times is to not load the `bootstrap_tools_conf.xml` file by default, and instead provide the option to the user as to whether they would like to load in the entire toolset or not through a webhook developed. The webhook can be activated by clicking on the reload symbol located in the masthead of any Galaxy session.
+
+The proper solution to this issue is to implement [`tool_source_database_connection`](https://docs.galaxyproject.org/en/latest/admin/config.html#tool-source-database-connection). Which creates a database of pre-parsed tool sources that Galaxy can reference when needing to load tools into memory. This feature is current in development and thus not currently able to be implemented by Galaxy admins.
+
+- Scratch Space full
+Galaxy is currently configured to set `TMP_DIR`, `amqp_internal_connection`, and `result_backend` to point to the scratch environment variable. `TMP_DIR` sets the temporary directory to be used by jobs submitted through Galaxy, `amqp_internal_connection` sets the database AMQP uses to communicate with other Galaxy related processes, and `results_backend`
+
+ 
+
 See the following [page](https://hpcc.ucr.edu/manuals/hpc_cluster/selected_software/galaxy/#common-issues) for listed known issues not stated here
 
 ### Database:
