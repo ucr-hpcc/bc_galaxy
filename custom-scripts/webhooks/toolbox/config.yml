@@ -1,0 +1,7 @@
+id: toolbox
+type:
+  - masthead
+activate: true
+
+icon: fa-refresh
+tooltip: Load preconfigured tool set

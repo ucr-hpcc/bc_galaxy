@@ -30,15 +30,10 @@ export GALAXY_CONFIG_FILE="${PWD}/galaxy.yml"
 export RUNNER="<%= context.job_runner %>"
 export DATAROOT="<%= working_dir.to_s %>"/.galaxy
 
-
-ENVIRONMENT_MAPPING_FILE_PATH="${DATAROOT}/config/environment_modules_mapping.yml"
-ENVIRONMENT_MODULES_FILE_PATH="${DATAROOT}/tools/helpers"
-ENVIRONMENT_MODULES_CONFIG_FILE_PATH="${DATAROOT}/config/helper_tools.xml"
 WEBHOOKS_DIR=${GALAXY_ROOT_DIR}/config/plugins/webhooks/local_webhooks
 
-
 if [[ $RUNNER == "slurm" ]]; then
-  WEBHOOKS_DIR=${GALAXY_ROOT_DIR}/config/plugins/webhooks/local_webhooks,${GALAXY_ROOT_DIR}/config/plugins/webhooks/slurm_webhooks
+WEBHOOKS_DIR=/rhome/mcuay001/ondemand/dev/bc_galaxy/custom-scripts/webhooks/local_webhooks/,${GALAXY_ROOT_DIR}/config/plugins/webhooks/slurm_webhooks
 (
 umask 077
 cat > "${PWD}/hpcc_tools.xml" << EOL
@@ -73,8 +68,8 @@ cat > "${PWD}/job_conf.xml" << EOL
 <?xml version="1.0"?>
 <job_conf>
     <plugins>
-        <plugin id="local" type="runner" load="galaxy.jobs.runners.local:LocalJobRunner"/>
-        <plugin id="slurm" type="runner" load="galaxy.jobs.runners.slurm:SlurmJobRunner"/>
+        <plugin id="local" type="runner" load="galaxy.jobs.runners.local:LocalJobRunner" />
+        <plugin id="slurm" type="runner" load="galaxy.jobs.runners.slurm:SlurmJobRunner" />
         <plugin id="dynamic" type="runner" >
           <param id="runner"><%= context.job_runner %></param>
           <param id="rules_module">galaxy.jobs.rules</param>
@@ -94,9 +89,9 @@ cat > "${PWD}/job_conf.xml" << EOL
         <destination id="local" runner="local">
             <env id="HPCC_MODULES">${HPCC_MODULES}</env>
             <env id="DATAROOT">${DATAROOT}</env>
+            <env id="GALAXY_CONFIG_FILE">${GALAXY_CONFIG_FILE}</env>
             <env id="port">${port}</env>
             <param id="tmp_dir">${SCRATCH}</param>
-            <param id="local_slots"><%= context.num_cores %></param>
         </destination>
     </destinations>
 </job_conf>
@@ -115,6 +110,7 @@ gravity:
     bind: 0.0.0.0:${port}
     extra_args: "--log-level info"
   celery:
+    concurrency: <%= context.num_cores %>
     loglevel: INFO
 
 galaxy:
@@ -124,10 +120,8 @@ galaxy:
   static_dir: ${GALAXY_ROOT_DIR}/static/
   use_remote_user: true
   remote_user_header: HTTP_X_FORWARDED_USER
-  dynamic_proxy_manage: false
   real_system_username: user
   tool_dependency_dir: ${DATAROOT}/dependencies
-  library_import_dir: ${DATAROOT}/import-dir/
   user_library_import_symlink_allowlist: /bigdata,/rhome
   allow_path_paste: true
   webhooks_dir: ${WEBHOOKS_DIR}
@@ -136,7 +130,7 @@ galaxy:
   integrated_tool_panel_config: ${DATAROOT}/config/integrated_tool_panel.xml
   shed_tool_data_path: ${DATAROOT}/shed_tool_data
   shed_tool_config_file: ${DATAROOT}/config/shed_tool_conf.xml
-  tool_config_file: ${GALAXY_ROOT_DIR}/lib/galaxy/config/sample/tool_conf.xml.sample,${PWD}/hpcc_tools.xml,${GALAXY_ROOT_DIR}/bootstrap/config/bootstrap_tools_conf.xml
+  tool_config_file: ${GALAXY_ROOT_DIR}/lib/galaxy/config/sample/tool_conf.xml.sample,${PWD}/hpcc_tools.xml
   tool_path: ${GALAXY_ROOT_DIR}/tools
   tool_data_path: ${DATAROOT}/shed_tool_data
   install_database_connection: "sqlite:///${DATAROOT}/install_tool_sheds.sqlite"
@@ -187,4 +181,3 @@ if [ ! -d "${DATAROOT}" ]; then
   rm ${DATAROOT}/workflow_sqlite_data.out
   chmod 770 ${DATAROOT}
 fi
-

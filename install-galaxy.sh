@@ -94,6 +94,7 @@ mkdir $PWD/$VERSION/config/plugins/webhooks/local_webhooks $PWD/$VERSION/config/
 
 ln -s $PWD/custom-scripts/$VERSION/webhooks/slurm $PWD/$VERSION/config/plugins/webhooks/slurm_webhooks
 ln -s $PWD/custom-scripts/$VERSION/webhooks/favicon $PWD/$VERSION/config/plugins/webhooks/local_webhooks
+ln -s $PWD/custom-scripts/$VERSION/webhooks/toolbox $PWD/$VERSION/config/plugins/webhooks/local_webhooks
 
 
 # Remove galaxy remote user and replace with custom remote user
